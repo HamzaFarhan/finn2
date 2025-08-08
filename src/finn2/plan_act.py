@@ -20,8 +20,6 @@ from pydantic_ai import (
 )
 from pydantic_ai.messages import ModelMessage, ModelMessagesTypeAdapter, ModelRequest
 from pydantic_ai.models import KnownModelName, Model
-from pydantic_ai.models.openai import OpenAIModel
-from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.tools import ToolDefinition
 from pydantic_ai.toolsets import CombinedToolset, FilteredToolset
 from pydantic_ai.toolsets.abstract import AbstractToolset
@@ -171,7 +169,7 @@ async def step_instructions(ctx: RunContext[PlanAndActDeps]) -> str:
         return ""
     step = ctx.deps.plan.steps[ctx.deps.current_step]
     step_str_list = [
-        (files("dreamai.prompts") / "act_mode.md").read_text().strip() + "\n",
+        (files("finn2.prompts") / "act_mode.md").read_text().strip() + "\n",
         f"<step number={step.step_number}>",
         f"<instructions>\n{step.instructions}\n</instructions>",
         f"<resultant_artifact_name>\n{step.resultant_artifact_name}\n</resultant_artifact_name>",
@@ -196,7 +194,7 @@ async def plan_mode_instructions(ctx: RunContext[PlanAndActDeps]) -> str:
         + "\n".join([f"{tool_def}" for tool_def in (await ctx.deps.get_plan_tool_defs(ctx)).values()])
         + "\n</available_tools>"
     )
-    plan_str_list = [(files("dreamai.prompts") / "plan_mode.md").read_text().strip(), tool_defs]
+    plan_str_list = [(files("finn2.prompts") / "plan_mode.md").read_text().strip(), tool_defs]
     if artifacts := ctx.deps.get_artifacts():
         plan_str_list.append(
             "<saved_artifacts>\n"
@@ -419,8 +417,8 @@ async def run_plan_and_act_agent(
     message_history_path: Path | str = "message_history.json",
 ):
     agent = create_plan_and_act_agent(retries=retries)
-    plan_model = plan_model or OpenAIModel("google/gemini-2.5-flash", provider=OpenRouterProvider())
-    act_model = act_model or OpenAIModel("openrouter/horizon-beta", provider=OpenRouterProvider())
+    plan_model = plan_model or "google-gla:gemini-2.5-flash"
+    act_model = act_model or "google-gla:gemini-2.5-flash"
     plan_user_prompt = user_prompt
     act_user_prompt = None
     plan_message_history: list[ModelMessage] = []

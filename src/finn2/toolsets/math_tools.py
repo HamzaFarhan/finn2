@@ -1,10 +1,13 @@
 from decimal import Decimal
-from pathlib import Path
 
 import polars as pl
+from pydantic_ai import RunContext
+
+from finn2.finn_deps import FinnDeps
+from finn2.toolsets.file_toolset import load_df
 
 
-def calculate_sum(data: list[Decimal] | str, column: str | None = None) -> Decimal:
+def calculate_sum(ctx: RunContext[FinnDeps], data: list[Decimal] | str, column: str | None = None) -> Decimal:
     """
     Calculate the sum of a column in a DataFrame.
 
@@ -28,8 +31,7 @@ def calculate_sum(data: list[Decimal] | str, column: str | None = None) -> Decim
     if column is None:
         raise ValueError("Column name must be provided when loading from a DataFrame.")
     try:
-        df_path = Path(data)
-        df = pl.read_parquet(df_path) if df_path.suffix.lower() == ".parquet" else pl.read_csv(df_path)
+        df = load_df(ctx, data)
     except Exception as e:
         raise RuntimeError(f"Error loading DataFrame: {e}")
     result = df.select(pl.col(column).sum()).item()

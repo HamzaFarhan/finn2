@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+from finn2.plan_act import PlanAndActDeps
+
 
 @dataclass(init=False)
 class DataDirs:
@@ -21,6 +23,5 @@ class DataDirs:
         self.results_dir.mkdir(parents=True, exist_ok=True)
 
 
-@dataclass
-class FinnDeps:
+class FinnDeps(PlanAndActDeps):
     dirs: DataDirs
