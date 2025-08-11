@@ -5,10 +5,10 @@ import polars as pl
 from loguru import logger
 from pydantic_ai import RunContext
 
-from finn2.finn_deps import FinnDeps
+from ..finn_deps import FinnDeps
 
 
-def resolve_df_path(ctx: RunContext[FinnDeps], df_path: str | Path) -> Path:
+def _resolve_df_path(ctx: RunContext[FinnDeps], df_path: str | Path) -> Path:
     if isinstance(df_path, str):
         df_path = Path(df_path)
     paths_to_try = [
@@ -28,7 +28,7 @@ def resolve_df_path(ctx: RunContext[FinnDeps], df_path: str | Path) -> Path:
 def load_df(ctx: RunContext[FinnDeps], data: pl.DataFrame | str | Path) -> pl.DataFrame:
     if isinstance(data, pl.DataFrame):
         return data
-    df_path = resolve_df_path(ctx, data)
+    df_path = _resolve_df_path(ctx, data)
     return pl.read_parquet(df_path) if df_path.suffix.lower() == ".parquet" else pl.read_csv(df_path)
 
 

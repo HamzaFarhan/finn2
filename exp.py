@@ -1,11 +1,11 @@
 from pathlib import Path
 
 from dotenv import load_dotenv
+from dreamai.plan_act import run_plan_and_act_agent
 from loguru import logger
 from pydantic_ai.toolsets import FunctionToolset
 
 from finn2.finn_deps import DataDirs, FinnDeps
-from finn2.plan_act import run_plan_and_act_agent
 from finn2.toolsets.file_toolset import describe_df
 from finn2.toolsets.math_tools import calculate_sum
 

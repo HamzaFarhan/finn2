@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from finn2.plan_act import PlanAndActDeps
+from dreamai.plan_act import PlanAndActDeps
 
 
 @dataclass(init=False)
