@@ -25,6 +25,39 @@ def _resolve_df_path(ctx: RunContext[FinnDeps], df_path: str | Path) -> Path:
     raise FileNotFoundError(f"DataFrame file not found in expected locations: {paths_to_try}")
 
 
+async def _list_files(
+    dir: Path, suffixes: str | list[str] = [".csv", ".parquet"], exclude_in: list[str] | None = None
+) -> str:
+    """
+    Lists all available in the `dir` and their summaries.
+    """
+    dir_name = dir.name
+    files = [file.expanduser().resolve() for file in Path(dir).glob("*")]
+    res = f"\n<available_{dir_name}_files>\n"
+    suffixes = [suffixes] if isinstance(suffixes, str) else suffixes
+    exclude_in = exclude_in or []
+    for file in files:
+        if any(exclude in file.name for exclude in exclude_in) or Path(file.name).suffix not in suffixes:
+            continue
+
+        res += file.name + "\n"
+    return res.strip() + f"\n</available_{dir_name}_files>\n"
+
+
+async def list_data_files(ctx: RunContext[FinnDeps]) -> str:
+    """
+    Lists all available csv files in the `data_dir`.
+    """
+    return await _list_files(dir=Path(ctx.deps.dirs.data_dir))
+
+
+async def list_analysis_files(ctx: RunContext[FinnDeps]) -> str:
+    """
+    Lists all the analysis csv files created so far in the `analysis_dir`.
+    """
+    return await _list_files(dir=Path(ctx.deps.dirs.analysis_dir))
+
+
 def load_df(ctx: RunContext[FinnDeps], data: pl.DataFrame | str | Path) -> pl.DataFrame:
     if isinstance(data, pl.DataFrame):
         return data
