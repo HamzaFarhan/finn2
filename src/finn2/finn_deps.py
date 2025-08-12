@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from pathlib import Path
 
-from dreamai.plan_act import PlanAndActDeps
+from dreamai.modes_agent import PlanAndActDeps
 
 
 @dataclass(init=False)

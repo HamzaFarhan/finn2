@@ -1,7 +1,7 @@
 from pathlib import Path
 
 from dotenv import load_dotenv
-from dreamai.plan_act import run_plan_and_act_agent
+from dreamai.modes_agent import run_plan_and_act_agent, user_interaction
 from loguru import logger
 from pydantic_ai.toolsets import FunctionToolset
 
@@ -110,7 +110,7 @@ if __name__ == "__main__":
     import asyncio
 
     arithmetic_toolset = FunctionToolset(
-        [
+        tools=[
             calculate_sum,
             calculate_average,
             calculate_min,
@@ -136,11 +136,12 @@ if __name__ == "__main__":
             calculate_cumsum,
             calculate_cumprod,
             calculate_variance_weighted,
-        ]
+        ],
+        id="arithmetic_toolset",
     )
 
     conditional_toolset = FunctionToolset(
-        [
+        tools=[
             sumif,
             sumifs,
             countif,
@@ -154,11 +155,12 @@ if __name__ == "__main__":
             subtotal,
             countblank,
             counta,
-        ]
+        ],
+        id="conditional_toolset",
     )
 
     date_and_time_toolset = FunctionToolset(
-        [
+        tools=[
             today,
             now,
             create_date,
@@ -178,11 +180,12 @@ if __name__ == "__main__":
             date_range,
             workday,
             networkdays,
-        ]
+        ],
+        id="date_and_time_toolset",
     )
 
     logical_and_errors_toolset = FunctionToolset(
-        [
+        tools=[
             logical_if,
             logical_iferror,
             logical_ifna,
@@ -198,11 +201,12 @@ if __name__ == "__main__":
             is_error,
             logical_and_scalar,
             logical_or_scalar,
-        ]
+        ],
+        id="logical_and_errors_toolset",
     )
 
     lookup_and_reference_toolset = FunctionToolset(
-        [
+        tools=[
             vlookup,
             hlookup,
             index_lookup,
@@ -217,10 +221,13 @@ if __name__ == "__main__":
             column_number,
             rows_count,
             columns_count,
-        ]
+        ],
+        id="lookup_and_reference_toolset",
     )
 
-    files_toolset = FunctionToolset([list_data_files, list_analysis_files, describe_df])
+    files_toolset = FunctionToolset(tools=[list_data_files, list_analysis_files, describe_df], id="files_toolset")
+
+    user_interaction_toolset = FunctionToolset(tools=[user_interaction], id="user_interaction")
 
     workspace_dir = Path("./workspaces/session/")
     agent_deps = FinnDeps(
@@ -228,14 +235,18 @@ if __name__ == "__main__":
             workspace_dir=workspace_dir,
             thread_dir=workspace_dir / "threads/1",
         ),
-        toolsets=[
+        toolset_descriptions=Path("./ltv_toolset_descs.md").read_text(),
+    )
+    agent_deps.add_toolsets(
+        [
+            user_interaction_toolset,
             files_toolset,
             arithmetic_toolset,
             conditional_toolset,
             date_and_time_toolset,
             logical_and_errors_toolset,
             lookup_and_reference_toolset,
-        ],
+        ]
     )
     asyncio.run(
         run_plan_and_act_agent(Path("/Users/hamza/dev/finn2/ltv_prompt.md").read_text(), agent_deps=agent_deps)
