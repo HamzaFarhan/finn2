@@ -230,13 +230,7 @@ if __name__ == "__main__":
     user_interaction_toolset = FunctionToolset(tools=[user_interaction], id="user_interaction")
 
     workspace_dir = Path("./workspaces/session/")
-    agent_deps = FinnDeps(
-        dirs=DataDirs(
-            workspace_dir=workspace_dir,
-            thread_dir=workspace_dir / "threads/1",
-        ),
-        toolset_descriptions=Path("./ltv_toolset_descs.md").read_text(),
-    )
+    agent_deps = FinnDeps(dirs=DataDirs(workspace_dir=workspace_dir, thread_dir=workspace_dir / "threads/1"))
     agent_deps.add_toolsets(
         [
             user_interaction_toolset,
