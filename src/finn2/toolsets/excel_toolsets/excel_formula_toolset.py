@@ -1260,10 +1260,10 @@ def build_countifs_expression(range_criteria_pairs: list[tuple[str, str]]) -> st
 
     Example:
         build_countifs_expression([
-            ("Raw_Subscriptions.C:C", "\"Pro\""),
-            ("Raw_Subscriptions.E:E", "\"<=2023-01-01\"")
+            ("Raw_Subscriptions!C:C", "\"Pro\""),
+            ("Raw_Subscriptions!E:E", "\"<=2023-01-01\"")
         ])
-        # Returns: 'COUNTIFS(Raw_Subscriptions.C:C,"Pro",Raw_Subscriptions.E:E,"<=2023-01-01")'
+        # Returns: 'COUNTIFS(Raw_Subscriptions!C:C,"Pro",Raw_Subscriptions!E:E,"<=2023-01-01")'
     """
     if not range_criteria_pairs:
         raise FormulaError("COUNTIFS requires at least one range-criteria pair")

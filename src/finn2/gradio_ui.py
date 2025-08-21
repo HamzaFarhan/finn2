@@ -118,7 +118,15 @@ class FinnUI:
         """Get the latest plan content"""
         agent_deps = self._create_agent_deps(project_name)
         if agent_deps.plan_path.exists():
-            return agent_deps.plan_path.read_text()
+            content = agent_deps.plan_path.read_text()
+
+            # Filter out lines that start with **toolset (case-insensitive)
+            filtered_lines: list[str] = []
+            for line in content.split("\n"):
+                if not line.strip().lower().startswith("**toolset"):
+                    filtered_lines.append(line)
+            return "\n".join(filtered_lines)
+
         return "No plan available yet."
 
     def _get_latest_workbook(self, project_name: str) -> tuple[pd.DataFrame | None, str | None]:
@@ -373,6 +381,14 @@ class FinnUI:
                 current_modified = agent_deps.plan_path.stat().st_mtime
                 if current_modified > last_modified:
                     content = agent_deps.plan_path.read_text()
+
+                    # Filter out lines that start with **toolset (case-insensitive)
+                    filtered_lines: list[str] = []
+                    for line in content.split("\n"):
+                        if not line.strip().lower().startswith("**toolset"):
+                            filtered_lines.append(line)
+                    content = "\n".join(filtered_lines)
+
                     # Use CSS to make the Plan tab text yellow
                     indicator = """
                     <style>

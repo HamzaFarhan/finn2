@@ -31,6 +31,7 @@ class FileOperationError(Exception):
 def _detect_and_convert_data_types(df: pl.DataFrame) -> pl.DataFrame:
     """
     Detect and convert data types in a Polars DataFrame, with special handling for dates.
+    Always converts to date-only format, never datetime with timestamps.
 
     Args:
         df: Input Polars DataFrame
@@ -42,19 +43,19 @@ def _detect_and_convert_data_types(df: pl.DataFrame) -> pl.DataFrame:
         # Try to infer schema with better type detection
         converted_df = df.with_columns(
             [
-                # Try to parse as date first, then datetime, then keep as string
+                # Try to parse as date first (including datetime patterns but convert to date only)
                 pl.when(
                     pl.col(col).str.contains(r"^\d{4}-\d{2}-\d{2}$").fill_null(False)
                     | pl.col(col).str.contains(r"^\d{2}/\d{2}/\d{4}$").fill_null(False)
                     | pl.col(col).str.contains(r"^\d{2}-\d{2}-\d{4}$").fill_null(False)
                     | pl.col(col).str.contains(r"^\d{1,2}/\d{1,2}/\d{4}$").fill_null(False)
-                )
-                .then(pl.col(col).str.to_date(format=None, strict=False))
-                .when(
-                    pl.col(col).str.contains(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}").fill_null(False)
+                    | pl.col(col).str.contains(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}").fill_null(False)
                     | pl.col(col).str.contains(r"^\d{2}/\d{2}/\d{4} \d{2}:\d{2}").fill_null(False)
                 )
-                .then(pl.col(col).str.to_datetime(format=None, strict=False))
+                .then(
+                    # Parse as datetime first, then convert to date to strip time component
+                    pl.col(col).str.to_datetime(format=None, strict=False).dt.date()
+                )
                 .otherwise(
                     # Try numeric conversion
                     pl.when(pl.col(col).str.contains(r"^\d+\.?\d*$").fill_null(False))
