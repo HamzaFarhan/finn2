@@ -4,14 +4,13 @@ from pathlib import Path
 
 import logfire
 from dotenv import load_dotenv
+from dreamai.agent import AgentDeps, PlanCreated, create_agent
 from pydantic_ai.messages import ModelMessagesTypeAdapter
 from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import UsageLimits
 from tenacity import retry, stop_after_attempt, wait_random
 
-from dreamai.agent import AgentDeps, AgentToolset, PlanCreated, create_agent
-
-from .finn_deps import DataDirs, FinnDeps
+from .finn_deps import DataDirs, FinnDeps, FinnToolset
 from .toolsets.excel_toolsets.excel_charts_toolset import (
     apply_chart_preset,
     create_chart,
@@ -85,7 +84,7 @@ logfire.instrument_pydantic_ai()
 logfire.instrument_httpx(capture_all=True)
 
 
-excel_structure_toolset = AgentToolset(
+excel_structure_toolset = FinnToolset(
     tools=[
         create_excel_file,
         csv_to_excel_sheet,
@@ -116,7 +115,7 @@ excel_structure_toolset = AgentToolset(
 )
 
 
-excel_formula_toolset = AgentToolset(
+excel_formula_toolset = FinnToolset(
     tools=[
         write_date_function,
         write_financial_function,
@@ -139,7 +138,7 @@ excel_formula_toolset = AgentToolset(
 )
 
 
-excel_formatting_toolset = AgentToolset(
+excel_formatting_toolset = FinnToolset(
     tools=[
         apply_cell_formatting,
         apply_conditional_formatting,
@@ -155,7 +154,7 @@ excel_formatting_toolset = AgentToolset(
 )
 
 
-excel_charts_toolset = AgentToolset(
+excel_charts_toolset = FinnToolset(
     tools=[
         create_chart,
         create_matplotlib_chart,
