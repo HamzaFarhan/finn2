@@ -4,7 +4,7 @@ import polars as pl
 from pydantic_ai import ModelRetry, RunContext
 
 from ..finn_deps import FinnDeps
-from .file_toolset import load_df, save_df_to_analysis_dir
+from .file_toolset import load_file, save_df_to_analysis_dir
 
 getcontext().prec = 28
 
@@ -40,7 +40,7 @@ def logical_if(
         # Returns path to saved DataFrame with conditional values
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -50,7 +50,7 @@ def logical_if(
     elif value_if_true_literal is not None:
         value_if_true = pl.lit(value_if_true_literal)
     else:
-        raise ValueError("Either value_if_true_column or value_if_true_literal must be provided")
+        raise ModelRetry("Either value_if_true_column or value_if_true_literal must be provided")
 
     # Determine value_if_false
     if value_if_false_column is not None:
@@ -58,7 +58,7 @@ def logical_if(
     elif value_if_false_literal is not None:
         value_if_false = pl.lit(value_if_false_literal)
     else:
-        raise ValueError("Either value_if_false_column or value_if_false_literal must be provided")
+        raise ModelRetry("Either value_if_false_column or value_if_false_literal must be provided")
 
     result_df = df.with_columns(
         pl.when(pl.col(logical_test_column)).then(value_if_true).otherwise(value_if_false).alias("if_result")
@@ -94,7 +94,7 @@ def logical_iferror(
         # Returns path to saved DataFrame with error handling
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -104,7 +104,7 @@ def logical_iferror(
     elif value_if_error_literal is not None:
         value_if_error = pl.lit(value_if_error_literal)
     else:
-        raise ValueError("Either value_if_error_column or value_if_error_literal must be provided")
+        raise ModelRetry("Either value_if_error_column or value_if_error_literal must be provided")
 
     result_df = df.with_columns(
         pl.when(pl.col(value_column).is_null())
@@ -143,7 +143,7 @@ def logical_ifna(
         # Returns path to saved DataFrame with N/A handling
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -153,7 +153,7 @@ def logical_ifna(
     elif value_if_na_literal is not None:
         value_if_na = pl.lit(value_if_na_literal)
     else:
-        raise ValueError("Either value_if_na_column or value_if_na_literal must be provided")
+        raise ModelRetry("Either value_if_na_column or value_if_na_literal must be provided")
 
     result_df = df.with_columns(
         pl.when(pl.col(value_column).is_null())
@@ -188,12 +188,12 @@ def logical_ifs(
         # Returns path to saved DataFrame with multiple condition results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if not conditions_and_values:
-        raise ValueError("At least one condition and value pair must be provided")
+        raise ModelRetry("At least one condition and value pair must be provided")
 
     # Build the when-then chain
     expr = pl.when(pl.col(conditions_and_values[0][0])).then(pl.lit(conditions_and_values[0][1]))
@@ -232,12 +232,12 @@ def logical_and(
         # Returns path to saved DataFrame with AND operation results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if not logical_columns:
-        raise ValueError("At least one logical column must be provided")
+        raise ModelRetry("At least one logical column must be provided")
 
     # Start with the first column
     expr = pl.col(logical_columns[0])
@@ -274,12 +274,12 @@ def logical_or(
         # Returns path to saved DataFrame with OR operation results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if not logical_columns:
-        raise ValueError("At least one logical column must be provided")
+        raise ModelRetry("At least one logical column must be provided")
 
     # Start with the first column
     expr = pl.col(logical_columns[0])
@@ -316,7 +316,7 @@ def logical_not(
         # Returns path to saved DataFrame with NOT operation results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -352,12 +352,12 @@ def logical_switch(
         # Returns path to saved DataFrame with switch operation results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if not value_result_pairs:
-        raise ValueError("At least one value-result pair must be provided")
+        raise ModelRetry("At least one value-result pair must be provided")
 
     # Build the when-then chain
     expr = pl.when(pl.col(expression_column) == value_result_pairs[0][0]).then(pl.lit(value_result_pairs[0][1]))
@@ -399,12 +399,12 @@ def logical_xor(
         # Returns path to saved DataFrame with XOR operation results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if not logical_columns:
-        raise ValueError("At least one logical column must be provided")
+        raise ModelRetry("At least one logical column must be provided")
 
     # Count the number of True values
     true_count = pl.sum_horizontal([pl.col(col).cast(pl.Int32) for col in logical_columns])
@@ -438,7 +438,7 @@ def is_blank(
         # Returns path to saved DataFrame with blank check results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -470,7 +470,7 @@ def is_number(
         # Returns path to saved DataFrame with number check results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -506,7 +506,7 @@ def is_text(
         # Returns path to saved DataFrame with text check results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -542,7 +542,7 @@ def is_error(
         # Returns path to saved DataFrame with error check results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -567,12 +567,12 @@ def logical_and_scalar(ctx: RunContext[FinnDeps], file_path: str, logical_column
         True
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if not logical_columns:
-        raise ValueError("At least one logical column must be provided")
+        raise ModelRetry("At least one logical column must be provided")
 
     # Check if all values in all columns are true
     for col in logical_columns:
@@ -598,12 +598,12 @@ def logical_or_scalar(ctx: RunContext[FinnDeps], file_path: str, logical_columns
         True
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if not logical_columns:
-        raise ValueError("At least one logical column must be provided")
+        raise ModelRetry("At least one logical column must be provided")
 
     # Check if any value in any column is true
     for col in logical_columns:

@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal, getcontext
 
 import polars as pl
@@ -5,7 +6,7 @@ from pydantic import BaseModel
 from pydantic_ai import ModelRetry, RunContext
 
 from ..finn_deps import FinnDeps
-from .file_toolset import load_df
+from .file_toolset import load_file
 
 getcontext().prec = 28
 
@@ -15,47 +16,88 @@ class Condition(BaseModel):
     condition: str
 
 
+def _is_iso_date(value_str: str) -> bool:
+    """Check if a string is in ISO date format."""
+    try:
+        datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+        return True
+    except ValueError:
+        return False
+
+
 def _parse_condition(condition: str, column_expr: pl.Expr) -> pl.Expr:
     """Parse a condition string and return a Polars expression."""
     condition = condition.strip()
 
     # Handle comparison operators
     if condition.startswith(">="):
-        value = float(condition[2:].strip())
-        return column_expr >= value
+        value_str = condition[2:].strip()
+        if _is_iso_date(value_str):
+            date_value = datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+            return column_expr.str.to_datetime() >= date_value
+        else:
+            value = float(value_str)
+            return column_expr >= value
     elif condition.startswith("<="):
-        value = float(condition[2:].strip())
-        return column_expr <= value
+        value_str = condition[2:].strip()
+        if _is_iso_date(value_str):
+            date_value = datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+            return column_expr.str.to_datetime() <= date_value
+        else:
+            value = float(value_str)
+            return column_expr <= value
     elif condition.startswith(">"):
-        value = float(condition[1:].strip())
-        return column_expr > value
+        value_str = condition[1:].strip()
+        if _is_iso_date(value_str):
+            date_value = datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+            return column_expr.str.to_datetime() > date_value
+        else:
+            value = float(value_str)
+            return column_expr > value
     elif condition.startswith("<"):
-        value = float(condition[1:].strip())
-        return column_expr < value
+        value_str = condition[1:].strip()
+        if _is_iso_date(value_str):
+            date_value = datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+            return column_expr.str.to_datetime() < date_value
+        else:
+            value = float(value_str)
+            return column_expr < value
     elif condition.startswith("="):
         value_str = condition[1:].strip()
-        try:
-            value = float(value_str)
-            return column_expr == value
-        except ValueError:
-            # String comparison
-            return column_expr == value_str.strip("\"'")
+        if _is_iso_date(value_str):
+            date_value = datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+            return column_expr.str.to_datetime() == date_value
+        else:
+            try:
+                value = float(value_str)
+                return column_expr == value
+            except ValueError:
+                # String comparison
+                return column_expr == value_str.strip("\"'")
     elif condition.startswith("!=") or condition.startswith("<>"):
         value_str = condition[2:].strip()
-        try:
-            value = float(value_str)
-            return column_expr != value
-        except ValueError:
-            # String comparison
-            return column_expr != value_str.strip("\"'")
+        if _is_iso_date(value_str):
+            date_value = datetime.fromisoformat(value_str.replace("Z", "+00:00"))
+            return column_expr.str.to_datetime() != date_value
+        else:
+            try:
+                value = float(value_str)
+                return column_expr != value
+            except ValueError:
+                # String comparison
+                return column_expr != value_str.strip("\"'")
     else:
         # Try direct equality comparison
-        try:
-            value = float(condition)
-            return column_expr == value
-        except ValueError:
-            # String comparison
-            return column_expr == condition.strip("\"'")
+        if _is_iso_date(condition):
+            date_value = datetime.fromisoformat(condition.replace("Z", "+00:00"))
+            return column_expr.str.to_datetime() == date_value
+        else:
+            try:
+                value = float(condition)
+                return column_expr == value
+            except ValueError:
+                # String comparison
+                return column_expr == condition.strip("\"'")
 
 
 def sumif(
@@ -87,16 +129,18 @@ def sumif(
         # Reads data.csv and returns sum of sales where sales > 1000
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if sum_column is None:
         sum_column = condition_column
-
-    condition_expr = _parse_condition(condition, pl.col(condition_column))
-    result = df.select(pl.col(sum_column).filter(condition_expr).sum()).item()
-    return Decimal(str(result))
+    try:
+        condition_expr = _parse_condition(condition, pl.col(condition_column))
+        result = df.select(pl.col(sum_column).filter(condition_expr).sum()).item()
+        return Decimal(str(result))
+    except Exception as e:
+        raise ModelRetry(f"Error computing sumif: {e}")
 
 
 def sumifs(
@@ -123,18 +167,20 @@ def sumifs(
         300.0
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    # Build combined filter expression
-    filter_expr = pl.lit(True)
-    for condition in conditions:
-        condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
-        filter_expr = filter_expr & condition_expr
+    try:
+        filter_expr = pl.lit(True)
+        for condition in conditions:
+            condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
+            filter_expr = filter_expr & condition_expr
 
-    result = df.select(pl.col(sum_column).filter(filter_expr).sum()).item()
-    return Decimal(str(result))
+        result = df.select(pl.col(sum_column).filter(filter_expr).sum()).item()
+        return Decimal(str(result))
+    except Exception as e:
+        raise ModelRetry(f"Error computing sumifs: {e}")
 
 
 def countif(
@@ -161,13 +207,15 @@ def countif(
         2
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    condition_expr = _parse_condition(condition, pl.col(condition_column))
-    result = df.select(condition_expr.sum()).item()
-    return int(result)
+    try:
+        condition_expr = _parse_condition(condition, pl.col(condition_column))
+        result = df.select(condition_expr.sum()).item()
+        return int(result)
+    except Exception as e:
+        raise ModelRetry(f"Error computing countif: {e}")
 
 
 def countifs(ctx: RunContext[FinnDeps], file_path: str, conditions: list[Condition]) -> int:
@@ -188,18 +236,19 @@ def countifs(ctx: RunContext[FinnDeps], file_path: str, conditions: list[Conditi
         1
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
+    try:
+        filter_expr = pl.lit(True)
+        for condition in conditions:
+            condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
+            filter_expr = filter_expr & condition_expr
 
-    # Build combined filter expression
-    filter_expr = pl.lit(True)
-    for condition in conditions:
-        condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
-        filter_expr = filter_expr & condition_expr
-
-    result = df.select(filter_expr.sum()).item()
-    return int(result)
+        result = df.select(filter_expr.sum()).item()
+        return int(result)
+    except Exception as e:
+        raise ModelRetry(f"Error computing countifs: {e}")
 
 
 def averageif(
@@ -228,16 +277,18 @@ def averageif(
         250.0
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if average_column is None:
         average_column = condition_column
-
-    condition_expr = _parse_condition(condition, pl.col(condition_column))
-    result = df.select(pl.col(average_column).filter(condition_expr).mean()).item()
-    return Decimal(str(result))
+    try:
+        condition_expr = _parse_condition(condition, pl.col(condition_column))
+        result = df.select(pl.col(average_column).filter(condition_expr).mean()).item()
+        return Decimal(str(result))
+    except Exception as e:
+        raise ModelRetry(f"Error computing averageif: {e}")
 
 
 def averageifs(
@@ -264,18 +315,19 @@ def averageifs(
         300.0
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
+    try:
+        filter_expr = pl.lit(True)
+        for condition in conditions:
+            condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
+            filter_expr = filter_expr & condition_expr
 
-    # Build combined filter expression
-    filter_expr = pl.lit(True)
-    for condition in conditions:
-        condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
-        filter_expr = filter_expr & condition_expr
-
-    result = df.select(pl.col(average_column).filter(filter_expr).mean()).item()
-    return Decimal(str(result))
+        result = df.select(pl.col(average_column).filter(filter_expr).mean()).item()
+        return Decimal(str(result))
+    except Exception as e:
+        raise ModelRetry(f"Error computing averageifs: {e}")
 
 
 def maxifs(
@@ -302,18 +354,19 @@ def maxifs(
         300.0
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
+    try:
+        filter_expr = pl.lit(True)
+        for condition in conditions:
+            condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
+            filter_expr = filter_expr & condition_expr
 
-    # Build combined filter expression
-    filter_expr = pl.lit(True)
-    for condition in conditions:
-        condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
-        filter_expr = filter_expr & condition_expr
-
-    result = df.select(pl.col(max_column).filter(filter_expr).max()).item()
-    return Decimal(str(result))
+        result = df.select(pl.col(max_column).filter(filter_expr).max()).item()
+        return Decimal(str(result))
+    except Exception as e:
+        raise ModelRetry(f"Error computing maxifs: {e}")
 
 
 def minifs(
@@ -340,18 +393,19 @@ def minifs(
         300.0
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
+    try:
+        filter_expr = pl.lit(True)
+        for condition in conditions:
+            condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
+            filter_expr = filter_expr & condition_expr
 
-    # Build combined filter expression
-    filter_expr = pl.lit(True)
-    for condition in conditions:
-        condition_expr = _parse_condition(condition.condition, pl.col(condition.condition_column))
-        filter_expr = filter_expr & condition_expr
-
-    result = df.select(pl.col(min_column).filter(filter_expr).min()).item()
-    return Decimal(str(result))
+        result = df.select(pl.col(min_column).filter(filter_expr).min()).item()
+        return Decimal(str(result))
+    except Exception as e:
+        raise ModelRetry(f"Error computing minifs: {e}")
 
 
 def sumproduct(ctx: RunContext[FinnDeps], file_path: str, *columns: str) -> Decimal:
@@ -372,12 +426,12 @@ def sumproduct(ctx: RunContext[FinnDeps], file_path: str, *columns: str) -> Deci
         32.0  # (1*4) + (2*5) + (3*6) = 4 + 10 + 18 = 32
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if len(columns) < 2:
-        raise ValueError("SUMPRODUCT requires at least 2 columns")
+        raise ModelRetry("SUMPRODUCT requires at least 2 columns")
 
     # Start with first column
     product_expr = pl.col(columns[0])
@@ -416,7 +470,7 @@ def aggregate(
         15.0
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -443,7 +497,7 @@ def aggregate(
     elif function_num == 9:  # SUM
         result = df.select(col_expr.sum()).item()
     else:
-        raise ValueError(f"Unsupported function number: {function_num}")
+        raise ModelRetry(f"Unsupported function number: {function_num}")
 
     return Decimal(str(result))
 
@@ -467,7 +521,7 @@ def subtotal(ctx: RunContext[FinnDeps], file_path: str, function_num: int, colum
         15.0
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -493,7 +547,7 @@ def subtotal(ctx: RunContext[FinnDeps], file_path: str, function_num: int, colum
     elif base_func == 9:  # SUM
         result = df.select(col_expr.sum()).item()
     else:
-        raise ValueError(f"Unsupported function number: {function_num}")
+        raise ModelRetry(f"Unsupported function number: {function_num}")
 
     return Decimal(str(result))
 
@@ -516,7 +570,7 @@ def countblank(ctx: RunContext[FinnDeps], file_path: str, column: str) -> int:
         2
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -542,7 +596,7 @@ def counta(ctx: RunContext[FinnDeps], file_path: str, column: str) -> int:
         3
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 

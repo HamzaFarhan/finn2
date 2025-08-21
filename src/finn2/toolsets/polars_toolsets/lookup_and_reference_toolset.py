@@ -5,7 +5,7 @@ import polars as pl
 from pydantic_ai import ModelRetry, RunContext
 
 from ..finn_deps import FinnDeps
-from .file_toolset import load_df
+from .file_toolset import load_file
 
 getcontext().prec = 28
 
@@ -37,22 +37,25 @@ def vlookup(
         "Bob"
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    if range_lookup:
-        # Approximate match - find largest value <= lookup_value
-        filtered = df.filter(pl.col(table_array_column) <= lookup_value)
-        if filtered.height == 0:
-            return None
-        result = filtered.sort(table_array_column, descending=True).select(return_column).item(0)
-    else:
-        # Exact match
-        filtered = df.filter(pl.col(table_array_column) == lookup_value)
-        if filtered.height == 0:
-            return None
-        result = filtered.select(return_column).item(0)
+    try:
+        if range_lookup:
+            # Approximate match - find largest value <= lookup_value
+            filtered = df.filter(pl.col(table_array_column) <= lookup_value)
+            if filtered.height == 0:
+                return None
+            result = filtered.sort(table_array_column, descending=True).select(return_column).item(0)
+        else:
+            # Exact match
+            filtered = df.filter(pl.col(table_array_column) == lookup_value)
+            if filtered.height == 0:
+                return None
+            result = filtered.select(return_column).item(0)
+    except Exception as e:
+        raise ModelRetry(f"Error during VLOOKUP: {e}")
 
     # Use Decimal for numeric results
     if isinstance(result, (int, float)):
@@ -87,34 +90,36 @@ def hlookup(
         20
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     if lookup_row_index >= df.height or return_row_index >= df.height:
-        raise ValueError("Row index out of bounds")
+        raise ModelRetry("Row index out of bounds")
+    try:
+        # Get the lookup row as a list
+        lookup_row = df.row(lookup_row_index)
+        return_row = df.row(return_row_index)
 
-    # Get the lookup row as a list
-    lookup_row = df.row(lookup_row_index)
-    return_row = df.row(return_row_index)
-
-    if range_lookup:
-        # Find largest value <= lookup_value
-        best_match_idx = None
-        for i, val in enumerate(lookup_row):
-            if val <= lookup_value:
-                if best_match_idx is None or val > lookup_row[best_match_idx]:
-                    best_match_idx = i
-        if best_match_idx is None:
-            return None
-        result = return_row[best_match_idx]
-    else:
-        # Exact match
-        try:
-            col_index = lookup_row.index(lookup_value)
-            result = return_row[col_index]
-        except ValueError:
-            return None
+        if range_lookup:
+            # Find largest value <= lookup_value
+            best_match_idx = None
+            for i, val in enumerate(lookup_row):
+                if val <= lookup_value:
+                    if best_match_idx is None or val > lookup_row[best_match_idx]:
+                        best_match_idx = i
+            if best_match_idx is None:
+                return None
+            result = return_row[best_match_idx]
+        else:
+            # Exact match
+            try:
+                col_index = lookup_row.index(lookup_value)
+                result = return_row[col_index]
+            except ValueError:
+                return None
+    except Exception as e:
+        raise ModelRetry(f"Error during HLOOKUP: {e}")
 
     if isinstance(result, (int, float)):
         return Decimal(str(result))
@@ -141,22 +146,24 @@ def index_lookup(
         2
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
+    try:
+        if row_num >= df.height or row_num < 0:
+            return None
 
-    if row_num >= df.height or row_num < 0:
-        return None
+        if column_num is None:
+            row_data = df.row(row_num)
+            # Use Decimal for numeric values
+            return [Decimal(str(x)) if isinstance(x, (int, float)) else x for x in row_data]
 
-    if column_num is None:
-        row_data = df.row(row_num)
-        # Use Decimal for numeric values
-        return [Decimal(str(x)) if isinstance(x, (int, float)) else x for x in row_data]
+        if column_num >= df.width or column_num < 0:
+            return None
 
-    if column_num >= df.width or column_num < 0:
-        return None
-
-    result = df.item(row_num, column_num)
+        result = df.item(row_num, column_num)
+    except Exception as e:
+        raise ModelRetry(f"Error during INDEX_LOOKUP: {e}")
     if isinstance(result, (int, float)):
         return Decimal(str(result))
     return result
@@ -187,32 +194,34 @@ def match_lookup(
         2
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    if match_type == 0:
-        # Exact match
-        matches = df.with_row_index().filter(pl.col(lookup_column) == lookup_value)
-        if matches.height == 0:
-            return None
-        return int(matches.select("index").item(0))
-    elif match_type == 1:
-        # Largest value <= lookup_value
-        filtered = df.with_row_index().filter(pl.col(lookup_column) <= lookup_value)
-        if filtered.height == 0:
-            return None
-        result = filtered.sort(lookup_column, descending=True).select("index").item(0)
-        return int(result)
-    elif match_type == -1:
-        # Smallest value >= lookup_value
-        filtered = df.with_row_index().filter(pl.col(lookup_column) >= lookup_value)
-        if filtered.height == 0:
-            return None
-        result = filtered.sort(lookup_column).select("index").item(0)
-        return int(result)
-    else:
-        raise ValueError("match_type must be -1, 0, or 1")
+    try:
+        if match_type == 0:
+            # Exact match
+            matches = df.with_row_index().filter(pl.col(lookup_column) == lookup_value)
+            if matches.height == 0:
+                return None
+            return int(matches.select("index").item(0))
+        elif match_type == 1:
+            # Largest value <= lookup_value
+            filtered = df.with_row_index().filter(pl.col(lookup_column) <= lookup_value)
+            if filtered.height == 0:
+                return None
+            result = filtered.sort(lookup_column, descending=True).select("index").item(0)
+            return int(result)
+        elif match_type == -1:
+            # Smallest value >= lookup_value
+            filtered = df.with_row_index().filter(pl.col(lookup_column) >= lookup_value)
+            if filtered.height == 0:
+                return None
+            result = filtered.sort(lookup_column).select("index").item(0)
+            return int(result)
+        else:
+            raise ModelRetry("match_type must be -1, 0, or 1")
+    except Exception as e:
+        raise ModelRetry(f"Error during MATCH_LOOKUP: {e}")
 
 
 def xlookup(
@@ -242,18 +251,21 @@ def xlookup(
         "Bob"
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    filtered = df.filter(pl.col(lookup_column) == lookup_value)
-    if filtered.height == 0:
-        return if_not_found
+    try:
+        filtered = df.filter(pl.col(lookup_column) == lookup_value)
+        if filtered.height == 0:
+            return if_not_found
 
-    result = filtered.select(return_column).item(0)
-    if isinstance(result, (int, float)):
-        return Decimal(str(result))
-    return result
+        result = filtered.select(return_column).item(0)
+        if isinstance(result, (int, float)):
+            return Decimal(str(result))
+        return result
+    except Exception as e:
+        raise ModelRetry(f"Error during XLOOKUP: {e}")
 
 
 def offset_range(
@@ -287,33 +299,36 @@ def offset_range(
         [[5, 6], [8, 9]]
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    start_row = reference_row + rows_offset
-    start_col = reference_col + cols_offset
+    try:
+        start_row = reference_row + rows_offset
+        start_col = reference_col + cols_offset
 
-    if height is None:
-        height = 1
-    if width is None:
-        width = 1
+        if height is None:
+            height = 1
+        if width is None:
+            width = 1
 
-    end_row = start_row + height
-    end_col = start_col + width
+        end_row = start_row + height
+        end_col = start_col + width
 
-    if start_row < 0 or start_col < 0 or end_row > df.height or end_col > df.width:
-        return None
+        if start_row < 0 or start_col < 0 or end_row > df.height or end_col > df.width:
+            return None
 
-    result: list[list[Any]] = []
-    for row in range(start_row, end_row):
-        row_data: list[Any] = []
-        for col in range(start_col, end_col):
-            val = df.item(row, col)
-            row_data.append(Decimal(str(val)) if isinstance(val, (int, float)) else val)
-        result.append(row_data)
+        result: list[list[Any]] = []
+        for row in range(start_row, end_row):
+            row_data: list[Any] = []
+            for col in range(start_col, end_col):
+                val = df.item(row, col)
+                row_data.append(Decimal(str(val)) if isinstance(val, (int, float)) else val)
+            result.append(row_data)
 
-    return result
+        return result
+    except Exception as e:
+        raise ModelRetry(f"Error during OFFSET_RANGE: {e}")
 
 
 def indirect_reference(ctx: RunContext[FinnDeps], file_path: str, ref_text: str) -> str | Decimal | None:
@@ -333,28 +348,31 @@ def indirect_reference(ctx: RunContext[FinnDeps], file_path: str, ref_text: str)
         2
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    if "[" in ref_text and "]" in ref_text:
-        # Format: column_name[row_index]
-        col_name = ref_text.split("[")[0]
-        row_index = int(ref_text.split("[")[1].split("]")[0])
+    try:
+        if "[" in ref_text and "]" in ref_text:
+            # Format: column_name[row_index]
+            col_name = ref_text.split("[")[0]
+            row_index = int(ref_text.split("[")[1].split("]")[0])
 
-        if col_name not in df.columns or row_index >= df.height:
-            return None
+            if col_name not in df.columns or row_index >= df.height:
+                return None
 
-        result = df.select(col_name).item(row_index)
-    else:
-        # Just column name - return first value
-        if ref_text not in df.columns:
-            return None
-        result = df.select(ref_text).item(0)
+            result = df.select(col_name).item(row_index)
+        else:
+            # Just column name - return first value
+            if ref_text not in df.columns:
+                return None
+            result = df.select(ref_text).item(0)
 
-    if isinstance(result, (int, float)):
-        return Decimal(str(result))
-    return result
+        if isinstance(result, (int, float)):
+            return Decimal(str(result))
+        return result
+    except Exception as e:
+        raise ModelRetry(f"Error during INDIRECT_REFERENCE: {e}")
 
 
 def choose_value(
@@ -378,30 +396,33 @@ def choose_value(
         50
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    if not value_columns:
-        return None
+    try:
+        if not value_columns:
+            return None
 
-    # Find row with matching index
-    filtered = df.filter(pl.col(index_column) == index_num)
-    if filtered.height == 0:
-        return None
+        # Find row with matching index
+        filtered = df.filter(pl.col(index_column) == index_num)
+        if filtered.height == 0:
+            return None
 
-    # Choose column based on index (1-based)
-    if index_num < 1 or index_num > len(value_columns):
-        return None
+        # Choose column based on index (1-based)
+        if index_num < 1 or index_num > len(value_columns):
+            return None
 
-    chosen_column = value_columns[index_num - 1]
-    if chosen_column not in df.columns:
-        return None
+        chosen_column = value_columns[index_num - 1]
+        if chosen_column not in df.columns:
+            return None
 
-    result = filtered.select(chosen_column).item(0)
-    if isinstance(result, (int, float)):
-        return Decimal(str(result))
-    return result
+        result = filtered.select(chosen_column).item(0)
+        if isinstance(result, (int, float)):
+            return Decimal(str(result))
+        return result
+    except Exception as e:
+        raise ModelRetry(f"Error during CHOOSE_VALUE: {e}")
 
 
 def lookup_vector(
@@ -429,18 +450,21 @@ def lookup_vector(
         "B"
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    filtered = df.filter(pl.col(lookup_column) <= lookup_value)
-    if filtered.height == 0:
-        return None
+    try:
+        filtered = df.filter(pl.col(lookup_column) <= lookup_value)
+        if filtered.height == 0:
+            return None
 
-    result = filtered.sort(lookup_column, descending=True).select(result_column).item(0)
-    if isinstance(result, (int, float)):
-        return Decimal(str(result))
-    return result
+        result = filtered.sort(lookup_column, descending=True).select(result_column).item(0)
+        if isinstance(result, (int, float)):
+            return Decimal(str(result))
+        return result
+    except Exception as e:
+        raise ModelRetry(f"Error during LOOKUP_VECTOR: {e}")
 
 
 def address_cell(
@@ -463,39 +487,42 @@ def address_cell(
         >>> address_cell(1, 1, 1, True, "Sheet1")
         "Sheet1!$A$1"
     """
-    if a1_style:
-        # Convert column number to letter
-        col_letter = ""
-        col = column_num
-        while col > 0:
-            col -= 1
-            col_letter = chr(65 + (col % 26)) + col_letter
-            col //= 26
+    try:
+        if a1_style:
+            # Convert column number to letter
+            col_letter = ""
+            col = column_num
+            while col > 0:
+                col -= 1
+                col_letter = chr(65 + (col % 26)) + col_letter
+                col //= 26
 
-        # Apply absolute/relative formatting
-        if abs_num == 1:  # Absolute
-            address = f"${col_letter}${row_num}"
-        elif abs_num == 2:  # Absolute row, relative column
-            address = f"{col_letter}${row_num}"
-        elif abs_num == 3:  # Relative row, absolute column
-            address = f"${col_letter}{row_num}"
-        else:  # Relative
-            address = f"{col_letter}{row_num}"
-    else:
-        # R1C1 style
-        if abs_num == 1:  # Absolute
-            address = f"R{row_num}C{column_num}"
-        elif abs_num == 2:  # Absolute row, relative column
-            address = f"R{row_num}C[{column_num}]"
-        elif abs_num == 3:  # Relative row, absolute column
-            address = f"R[{row_num}]C{column_num}"
-        else:  # Relative
-            address = f"R[{row_num}]C[{column_num}]"
+            # Apply absolute/relative formatting
+            if abs_num == 1:  # Absolute
+                address = f"${col_letter}${row_num}"
+            elif abs_num == 2:  # Absolute row, relative column
+                address = f"{col_letter}${row_num}"
+            elif abs_num == 3:  # Relative row, absolute column
+                address = f"${col_letter}{row_num}"
+            else:  # Relative
+                address = f"{col_letter}{row_num}"
+        else:
+            # R1C1 style
+            if abs_num == 1:  # Absolute
+                address = f"R{row_num}C{column_num}"
+            elif abs_num == 2:  # Absolute row, relative column
+                address = f"R{row_num}C[{column_num}]"
+            elif abs_num == 3:  # Relative row, absolute column
+                address = f"R[{row_num}]C{column_num}"
+            else:  # Relative
+                address = f"R[{row_num}]C[{column_num}]"
 
-    if sheet_text:
-        address = f"{sheet_text}!{address}"
+        if sheet_text:
+            address = f"{sheet_text}!{address}"
 
-    return address
+        return address
+    except Exception as e:
+        raise ModelRetry(f"Error during ADDRESS_CELL: {e}")
 
 
 def row_number(
@@ -521,27 +548,30 @@ def row_number(
         2
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    if reference_column is None:
-        # Return all row numbers
-        return list(range(1, df.height + 1))
+    try:
+        if reference_column is None:
+            # Return all row numbers
+            return list(range(1, df.height + 1))
 
-    if reference_value is None:
-        # Return row numbers for non-null values in column
-        non_null_rows = df.with_row_index().filter(pl.col(reference_column).is_not_null())
-        return [int(row) + 1 for row in non_null_rows.select("index").to_series().to_list()]
+        if reference_value is None:
+            # Return row numbers for non-null values in column
+            non_null_rows = df.with_row_index().filter(pl.col(reference_column).is_not_null())
+            return [int(row) + 1 for row in non_null_rows.select("index").to_series().to_list()]
 
-    # Find specific value
-    matches = df.with_row_index().filter(pl.col(reference_column) == reference_value)
-    if matches.height == 0:
-        return []
-    elif matches.height == 1:
-        return int(matches.select("index").item(0)) + 1
-    else:
-        return [int(row) + 1 for row in matches.select("index").to_series().to_list()]
+        # Find specific value
+        matches = df.with_row_index().filter(pl.col(reference_column) == reference_value)
+        if matches.height == 0:
+            return []
+        elif matches.height == 1:
+            return int(matches.select("index").item(0)) + 1
+        else:
+            return [int(row) + 1 for row in matches.select("index").to_series().to_list()]
+    except Exception as e:
+        raise ModelRetry(f"Error during ROW_NUMBER: {e}")
 
 
 def column_number(
@@ -563,18 +593,21 @@ def column_number(
         2
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    if reference_column is None:
-        # Return all column numbers
-        return list(range(1, df.width + 1))
+    try:
+        if reference_column is None:
+            # Return all column numbers
+            return list(range(1, df.width + 1))
 
-    if reference_column not in df.columns:
-        return 0
+        if reference_column not in df.columns:
+            return 0
 
-    return df.columns.index(reference_column) + 1
+        return df.columns.index(reference_column) + 1
+    except Exception as e:
+        raise ModelRetry(f"Error during COLUMN_NUMBER: {e}")
 
 
 def rows_count(ctx: RunContext[FinnDeps], file_path: str) -> int:
@@ -593,11 +626,14 @@ def rows_count(ctx: RunContext[FinnDeps], file_path: str) -> int:
         5
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    return df.height
+    try:
+        return df.height
+    except Exception as e:
+        raise ModelRetry(f"Error during ROWS_COUNT: {e}")
 
 
 def columns_count(ctx: RunContext[FinnDeps], file_path: str) -> int:
@@ -616,8 +652,11 @@ def columns_count(ctx: RunContext[FinnDeps], file_path: str) -> int:
         3
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
-    return df.width
+    try:
+        return df.width
+    except Exception as e:
+        raise ModelRetry(f"Error during COLUMNS_COUNT: {e}")

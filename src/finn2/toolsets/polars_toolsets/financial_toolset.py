@@ -6,7 +6,7 @@ import polars as pl
 from pydantic_ai import ModelRetry, RunContext
 
 from ..finn_deps import FinnDeps
-from .file_toolset import load_df
+from .file_toolset import load_file
 
 
 def calculate_npv(discount_rate: float, *cash_flows: float) -> float:
@@ -25,7 +25,7 @@ def calculate_npv(discount_rate: float, *cash_flows: float) -> float:
         77.88
     """
     if not cash_flows:
-        raise ValueError("At least one cash flow is required")
+        raise ModelRetry("At least one cash flow is required")
 
     npv = 0.0
     for i, cash_flow in enumerate(cash_flows):
@@ -57,14 +57,14 @@ def calculate_irr(
         0.162
     """
     try:
-        df = load_df(ctx, data)
+        df = load_file(ctx, data)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     cash_flows = df.select(pl.col(cash_flow_column)).to_series().to_list()
 
     if not cash_flows:
-        raise ValueError("Cash flow column is empty")
+        raise ModelRetry("Cash flow column is empty")
 
     # Newton-Raphson method for IRR calculation
     rate = guess
@@ -114,7 +114,7 @@ def calculate_xnpv(
         123.45
     """
     try:
-        df = load_df(ctx, data)
+        df = load_file(ctx, data)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -163,7 +163,7 @@ def calculate_xirr(
         0.162
     """
     try:
-        df = load_df(ctx, data)
+        df = load_file(ctx, data)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
@@ -175,7 +175,7 @@ def calculate_xirr(
     dates = df.select(pl.col(date_column)).to_series().to_list()
 
     if len(cash_flows) != len(dates):
-        raise ValueError("Cash flows and dates must have the same length")
+        raise ModelRetry("Cash flows and dates must have the same length")
 
     base_date = min(dates)
     days_diff = [(d - base_date).days for d in dates]
@@ -437,7 +437,7 @@ def calculate_nper(
     pmt_adjusted = payment * (1 + interest_rate * payment_type)
 
     if pmt_adjusted == 0:
-        raise ValueError("Payment cannot be zero when interest rate is non-zero")
+        raise ModelRetry("Payment cannot be zero when interest rate is non-zero")
 
     nper = math.log(
         (pmt_adjusted - future_value * interest_rate) / (pmt_adjusted + present_value * interest_rate)
@@ -1005,14 +1005,14 @@ def calculate_mirr(
         0.126
     """
     try:
-        df = load_df(ctx, data)
+        df = load_file(ctx, data)
     except Exception as e:
         raise ModelRetry(f"Error loading DataFrame: {e}")
 
     values = df.select(pl.col(values_column)).to_series().to_list()
 
     if not values:
-        raise ValueError("Values column is empty")
+        raise ModelRetry("Values column is empty")
 
     n = len(values)
     negative_flows: list[tuple[int, Any]] = []
@@ -1032,7 +1032,7 @@ def calculate_mirr(
     fv_positive = sum(value * (1 + reinvest_rate) ** (n - 1 - period) for period, value in positive_flows)
 
     if pv_negative == 0 or fv_positive == 0:
-        raise ValueError("Cannot calculate MIRR with zero present or future value")
+        raise ModelRetry("Cannot calculate MIRR with zero present or future value")
 
     # Calculate MIRR
     mirr = (fv_positive / abs(pv_negative)) ** (1 / (n - 1)) - 1

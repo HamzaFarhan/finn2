@@ -5,7 +5,7 @@ import polars as pl
 from pydantic_ai import ModelRetry, RunContext
 
 from ..finn_deps import FinnDeps
-from .file_toolset import load_df, save_df_to_analysis_dir
+from .file_toolset import load_file, save_df_to_analysis_dir
 
 
 def create_pivot_table(
@@ -36,28 +36,28 @@ def create_pivot_table(
         # Returns path to saved pivot table
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Create pivot table
+        if value_cols:
+            agg_expr = getattr(pl.col(value_cols[0]), agg_func)()
+            result_df = df.pivot(
+                on=column_col,
+                index=index_cols,
+                values=value_cols[0],
+                aggregate_function=agg_expr,
+            )
+        else:
+            result_df = df.pivot(
+                on=column_col,
+                index=index_cols,
+                values=None,
+                aggregate_function=None,
+            )
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Create pivot table
-    if value_cols:
-        agg_expr = getattr(pl.col(value_cols[0]), agg_func)()
-        result_df = df.pivot(
-            on=column_col,
-            index=index_cols,
-            values=value_cols[0],
-            aggregate_function=agg_expr,
-        )
-    else:
-        result_df = df.pivot(
-            on=column_col,
-            index=index_cols,
-            values=None,
-            aggregate_function=None,
-        )
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in create_pivot_table: {e}")
 
 
 def unpivot_data(
@@ -84,14 +84,14 @@ def unpivot_data(
         # Returns path to saved unpivoted data
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Unpivot the data
+        result_df = df.unpivot(index=id_vars, on=value_vars, variable_name="variable", value_name="value")
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Unpivot the data
-    result_df = df.unpivot(index=id_vars, on=value_vars, variable_name="variable", value_name="value")
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in unpivot_data: {e}")
 
 
 def group_by(
@@ -118,19 +118,19 @@ def group_by(
         # Returns path to saved grouped data
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Group and aggregate
+        agg_exprs: list[pl.Expr] = []
+        for col in df.columns:
+            if col not in group_cols:
+                agg_exprs.append(getattr(pl.col(col), agg_func)().alias(f"{col}_{agg_func}"))
+
+        result_df = df.group_by(group_cols).agg(*agg_exprs)
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Group and aggregate
-    agg_exprs: list[pl.Expr] = []
-    for col in df.columns:
-        if col not in group_cols:
-            agg_exprs.append(getattr(pl.col(col), agg_func)().alias(f"{col}_{agg_func}"))
-
-    result_df = df.group_by(group_cols).agg(*agg_exprs)
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in group_by: {e}")
 
 
 def cross_tabulation(
@@ -159,14 +159,14 @@ def cross_tabulation(
         # Returns path to saved cross-tabulation table
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Create cross-tabulation
+        result_df = df.pivot(on=col_vars, index=row_vars, values=value_vars, aggregate_function="sum")
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Create cross-tabulation
-    result_df = df.pivot(on=col_vars, index=row_vars, values=value_vars, aggregate_function="sum")
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in cross_tabulation: {e}")
 
 
 def group_by_agg(
@@ -193,28 +193,27 @@ def group_by_agg(
         # Returns path to saved grouped aggregation results
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Build aggregation expressions
+        agg_map: dict[str, Callable[[str], pl.Expr]] = {
+            "sum": pl.sum,
+            "mean": pl.mean,
+            "count": pl.count,
+            "min": pl.min,
+            "max": pl.max,
+        }
+        agg_exprs: list[pl.Expr] = []
+        for col, funcs in agg_dict.items():
+            for func in funcs:
+                if func in agg_map:
+                    agg_func_expr = agg_map[func]
+                    agg_exprs.append(agg_func_expr(col).alias(f"{col}_{func}"))
+        result_df = df.group_by(group_by_cols).agg(*agg_exprs)
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Build aggregation expressions
-    agg_map: dict[str, Callable[[str], pl.Expr]] = {
-        "sum": pl.sum,
-        "mean": pl.mean,
-        "count": pl.count,
-        "min": pl.min,
-        "max": pl.max,
-    }
-    agg_exprs: list[pl.Expr] = []
-    for col, funcs in agg_dict.items():
-        for func in funcs:
-            if func in agg_map:
-                agg_func_expr = agg_map[func]
-                agg_exprs.append(agg_func_expr(col).alias(f"{col}_{func}"))
-
-    result_df = df.group_by(group_by_cols).agg(*agg_exprs)
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in group_by_agg: {e}")
 
 
 def stack_data(
@@ -236,15 +235,15 @@ def stack_data(
         # Returns path to saved stacked data
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Stack columns using unpivot
+        id_vars = [col for col in df.columns if col not in columns_to_stack]
+        result_df = df.unpivot(index=id_vars, on=columns_to_stack, variable_name="quarter", value_name="value")
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Stack columns using unpivot
-    id_vars = [col for col in df.columns if col not in columns_to_stack]
-    result_df = df.unpivot(index=id_vars, on=columns_to_stack, variable_name="quarter", value_name="value")
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in stack_data: {e}")
 
 
 def unstack_data(
@@ -266,24 +265,24 @@ def unstack_data(
         # Returns path to saved unstacked data
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Unstack by pivoting
+        # Assuming the data has a value column and the level column to unstack
+        value_col = [col for col in df.columns if col not in [level_to_unstack] and col != "value"]
+        if value_col and "value" in df.columns:
+            result_df = df.pivot(
+                values="value",
+                index=[col for col in df.columns if col not in [level_to_unstack, "value"]],
+                on=level_to_unstack,
+            )
+        else:
+            # Fallback if no explicit value column found
+            result_df = df
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Unstack by pivoting
-    # Assuming the data has a value column and the level column to unstack
-    value_col = [col for col in df.columns if col not in [level_to_unstack] and col != "value"]
-    if value_col and "value" in df.columns:
-        result_df = df.pivot(
-            values="value",
-            index=[col for col in df.columns if col not in [level_to_unstack, "value"]],
-            on=level_to_unstack,
-        )
-    else:
-        # Fallback if no explicit value column found
-        result_df = df
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in unstack_data: {e}")
 
 
 def merge_data(
@@ -312,18 +311,18 @@ def merge_data(
         # Returns path to saved merged data
     """
     try:
-        left_df = load_df(ctx, left_path)
-        right_df = load_df(ctx, right_path)
+        left_df = load_file(ctx, left_path)
+        right_df = load_file(ctx, right_path)
+
+        # Perform merge/join
+        if isinstance(join_keys, str):
+            join_keys = [join_keys]
+
+        result_df = left_df.join(right_df, on=join_keys, how=join_type)
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrames: {e}")
-
-    # Perform merge/join
-    if isinstance(join_keys, str):
-        join_keys = [join_keys]
-
-    result_df = left_df.join(right_df, on=join_keys, how=join_type)
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in merge_data: {e}")
 
 
 def concat_data(
@@ -345,19 +344,19 @@ def concat_data(
         # Returns path to saved concatenated data
     """
     try:
-        dfs = [load_df(ctx, path) for path in file_paths]
+        dfs = [load_file(ctx, path) for path in file_paths]
+
+        # Concatenate DataFrames
+        if axis == 0:
+            # Vertical concatenation (stack rows)
+            result_df = pl.concat(dfs, how="vertical")
+        else:
+            # Horizontal concatenation (join columns)
+            result_df = pl.concat(dfs, how="horizontal")
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrames: {e}")
-
-    # Concatenate DataFrames
-    if axis == 0:
-        # Vertical concatenation (stack rows)
-        result_df = pl.concat(dfs, how="vertical")
-    else:
-        # Horizontal concatenation (join columns)
-        result_df = pl.concat(dfs, how="horizontal")
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in concat_data: {e}")
 
 
 def fill_forward(ctx: RunContext[FinnDeps], file_path: str, column: str, analysis_result_file_name: str) -> str:
@@ -377,14 +376,14 @@ def fill_forward(ctx: RunContext[FinnDeps], file_path: str, column: str, analysi
         # Returns path to saved data with forward filled values
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Forward fill missing values in specified column
+        result_df = df.with_columns(pl.col(column).forward_fill().alias(f"{column}_filled"))
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Forward fill missing values in specified column
-    result_df = df.with_columns(pl.col(column).forward_fill().alias(f"{column}_filled"))
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in fill_forward: {e}")
 
 
 def interpolate_values(
@@ -411,20 +410,19 @@ def interpolate_values(
         # Returns path to saved data with interpolated values
     """
     try:
-        df = load_df(ctx, file_path)
+        df = load_file(ctx, file_path)
+
+        # Interpolate missing values in specified column
+        if method == "linear":
+            result_df = df.with_columns(pl.col(column).interpolate().alias(f"{column}_interpolated"))
+        else:
+            result_df = df.with_columns(
+                pl.col(column)
+                .fill_null(strategy="forward")
+                .fill_null(strategy="backward")
+                .alias(f"{column}_interpolated")
+            )
+
+        return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
     except Exception as e:
-        raise ModelRetry(f"Error loading DataFrame: {e}")
-
-    # Interpolate missing values in specified column
-    if method == "linear":
-        result_df = df.with_columns(pl.col(column).interpolate().alias(f"{column}_interpolated"))
-    else:
-        # For nearest neighbor interpolation, we'll use forward/backward fill
-        result_df = df.with_columns(
-            pl.col(column)
-            .fill_null(strategy="forward")
-            .fill_null(strategy="backward")
-            .alias(f"{column}_interpolated")
-        )
-
-    return save_df_to_analysis_dir(ctx, result_df, analysis_result_file_name)
+        raise ModelRetry(f"Error in interpolate_values: {e}")

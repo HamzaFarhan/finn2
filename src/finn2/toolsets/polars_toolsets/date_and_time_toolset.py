@@ -2,6 +2,7 @@ from datetime import date, datetime, time, timedelta
 from typing import Literal
 
 from dateutil.relativedelta import relativedelta
+from pydantic_ai import ModelRetry
 
 
 def today() -> str:
@@ -177,7 +178,7 @@ def datedif(start_date: str, end_date: str, unit: str) -> int:
     elif unit.upper() == "Y":
         return end.year - start.year
     else:
-        raise ValueError("Unit must be 'D', 'M', or 'Y'")
+        raise ModelRetry("Unit must be 'D', 'M', or 'Y'")
 
 
 def yearfrac(start_date: str, end_date: str, basis: int = 0) -> float:
@@ -236,7 +237,7 @@ def weekday(serial_number: str, return_type: int = 1) -> int:
         # Monday=1, Tuesday=2, ..., Sunday=7
         return weekday_num + 1
     else:
-        raise ValueError("return_type must be 1 or 2")
+        raise ModelRetry("return_type must be 1 or 2")
 
 
 def quarter(date_str: str) -> int:
@@ -348,9 +349,7 @@ def extract_second(serial_number: str) -> int:
         return t.second
 
 
-def date_range(
-    start_date: str, end_date: str, frequency: Literal["D", "W", "M", "Q", "Y"]
-) -> list[str]:
+def date_range(start_date: str, end_date: str, frequency: Literal["D", "W", "M", "Q", "Y"]) -> list[str]:
     """
     Generate a series of dates between a start and end date with a specified frequency.
 
@@ -394,11 +393,7 @@ def date_range(
             current_month = 3
             current_year += 1
         else:
-            current = (
-                date(current_year, current_month, 1)
-                + relativedelta(months=1)
-                - timedelta(days=1)
-            )
+            current = date(current_year, current_month, 1) + relativedelta(months=1) - timedelta(days=1)
             if current < start:
                 current_month += 3
                 if current_month > 12:
@@ -406,11 +401,7 @@ def date_range(
                     current_year += 1
 
         while True:
-            current = (
-                date(current_year, current_month, 1)
-                + relativedelta(months=1)
-                - timedelta(days=1)
-            )
+            current = date(current_year, current_month, 1) + relativedelta(months=1) - timedelta(days=1)
             if current > end:
                 break
             dates.append(current.isoformat())

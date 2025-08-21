@@ -1,4 +1,0 @@
-notice how in #file:arithmetic_toolset.py   the data can only be str, not a pl dataframe. it should be a file_path
-and we prefer to do ops using Decimal when we can for precision
-and we return a Decimal as well when appropriate.
-make changes to the current toolset based on this
