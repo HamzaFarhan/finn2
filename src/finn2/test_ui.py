@@ -1,15 +1,11 @@
-#!/usr/bin/env python3
-"""
-Test script for the Finn Gradio UI
-"""
-
-import sys
+import os
 from pathlib import Path
 
-# Add the parent directory to the path so we can import finn
-sys.path.insert(0, str(Path(__file__).parent.parent))
+from dotenv import load_dotenv
 
 from .gradio_ui import launch_finn_ui
+
+load_dotenv()
 
 if __name__ == "__main__":
     # Create a test workspace
@@ -21,7 +17,11 @@ if __name__ == "__main__":
     print("🌐 URL: http://localhost:7860")
     try:
         launch_finn_ui(
-            workspace_dir=test_workspace, share=False, server_name="0.0.0.0", server_port=7860, show_error=True
+            workspace_dir=test_workspace,
+            share=False,
+            server_name=os.getenv("SERVER_NAME", "0.0.0.0"),
+            server_port=os.getenv("SERVER_PORT", 7860),
+            show_error=True,
         )
     except KeyboardInterrupt:
         print("\n👋 Finn UI stopped.")
