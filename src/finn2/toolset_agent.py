@@ -45,7 +45,6 @@ from .toolsets.excel_toolsets.excel_formula_toolset import (
     write_nested_function,
     write_statistical_function,
     write_text_function,
-    
 )
 from .toolsets.excel_toolsets.excel_structure_toolset import (
     add_sheet,
@@ -179,7 +178,16 @@ file_toolset = FunctionToolset[AgentDeps](
 
 @retry(stop=stop_after_attempt(3), wait=wait_random(min=1, max=3))
 async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated:
-    agent = create_agent()
+    agent = create_agent(
+        instructions=(
+            "When creating the steps, explicitly state stuff.\n"
+            "Examples:\n"
+            "'Create a new Excel file named 'Sales_Data.xlsx' and add a sheet called 'Q1 Sales'.'"
+            "Add orders.csv as a sheet called 'Orders'.\n"
+            "Use the formula: =SUM('Q1 Sales'!B2:B10) to calculate the total sales for Q1.\n\n"
+            "This makes it easier for the user to approve/reject/iterate on the steps with you before executing them."
+        )
+    )
     res = await agent.run(
         user_prompt,
         deps=agent_deps,
