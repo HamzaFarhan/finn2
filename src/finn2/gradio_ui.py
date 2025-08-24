@@ -542,7 +542,7 @@ def launch_finn_ui(workspace_dir: Path = Path("workspaces/session"), **kwargs):
     """Launch the Finn UI"""
     ui = FinnUI(workspace_dir)
     demo = ui.create_interface()
-    return demo.launch(**kwargs)
+    return demo.launch(allowed_paths=["/opt/data/finn2/data/workspaces", "/data/workspaces"], **kwargs)
 
 
 if __name__ == "__main__":
