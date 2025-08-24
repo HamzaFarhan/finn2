@@ -10,7 +10,7 @@ load_dotenv()
 if __name__ == "__main__":
     # Create a test workspace
     test_workspace = Path(os.getenv("WORKSPACES_DIR", ".")) / "test_workspace"
-    test_workspace.mkdir(exist_ok=True)
+    test_workspace.mkdir(parents=True, exist_ok=True)
 
     print("🚀 Launching Finn UI...")
     print("📁 Workspace:", test_workspace.absolute())
