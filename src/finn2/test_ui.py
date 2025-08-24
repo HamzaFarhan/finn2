@@ -3,7 +3,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .gradio_ui import launch_finn_ui
+from finn2.gradio_ui import launch_finn_ui
 
 load_dotenv()
 
