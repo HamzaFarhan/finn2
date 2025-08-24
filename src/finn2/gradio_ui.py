@@ -268,12 +268,20 @@ class FinnUI:
                         with gr.Tabs() as inquiry_tabs:
                             # Plan Tab
                             with gr.Tab("Plan", id="plan_tab") as plan_tab:
-                                plan_content = gr.Markdown(value="No plan available yet.", label="Current Plan")
+                                # Load initial plan content
+                                initial_plan = self._get_latest_plan(self.current_project)
+                                plan_content = gr.Markdown(value=initial_plan, label="Current Plan")
                                 plan_updated_indicator = gr.HTML("")
 
                             # Workbook Tab
                             with gr.Tab("Workbook", id="workbook_tab") as workbook_tab:
-                                workbook_download = gr.File(label="Download Workbook", visible=False)
+                                # Load initial workbook if available
+                                initial_df, initial_file_path = self._get_latest_workbook(self.current_project)
+                                workbook_download = gr.File(
+                                    label="Download Workbook",
+                                    value=initial_file_path if initial_file_path else None,
+                                    visible=initial_file_path is not None,
+                                )
                                 workbook_updated_indicator = gr.HTML("")
 
             # Timer for live updates
@@ -304,26 +312,42 @@ class FinnUI:
             def switch_project(selected_project: str, current_project: str):
                 """Switch to a different project"""
                 if selected_project == current_project:
+                    # Return current state without changes but refresh data files
+                    history = self._load_chat_history(current_project)
+                    formatted_history = self._format_chat_history(history)
+                    plan_content_text = self._get_latest_plan(current_project)
+                    _, workbook_path = self._get_latest_workbook(current_project)
+
                     return (
                         current_project,
-                        [],
+                        formatted_history,
                         gr.HTML(f"<h3 style='text-align: center; color: #666;'>Project: {current_project}</h3>"),
-                        gr.HTML(value=self._format_data_files_html()),  # Refresh data files list
+                        gr.HTML(value=self._format_data_files_html()),
+                        plan_content_text,
+                        gr.File(value=workbook_path if workbook_path else None, visible=workbook_path is not None),
                     )
 
                 self.current_project = selected_project
                 self.current_agent_deps = self._create_agent_deps(selected_project)
                 # self._save_last_project(selected_project)
 
-                # Load chat history for the selected project
+                # Load all data for the selected project
                 history = self._load_chat_history(selected_project)
                 formatted_history = self._format_chat_history(history)
+
+                # Get plan content
+                plan_content_text = self._get_latest_plan(selected_project)
+
+                # Get workbook
+                _, workbook_path = self._get_latest_workbook(selected_project)
 
                 return (
                     selected_project,
                     formatted_history,
                     gr.HTML(f"<h3 style='text-align: center; color: #666;'>Project: {selected_project}</h3>"),
                     gr.HTML(value=self._format_data_files_html()),  # Refresh data files list
+                    plan_content_text,
+                    gr.File(value=workbook_path if workbook_path else None, visible=workbook_path is not None),
                 )
 
             def handle_file_upload(files):
@@ -452,7 +476,9 @@ class FinnUI:
                     chatbot,
                     project_name_display,
                     data_files_list,
-                ],  # Add data_files_list to outputs
+                    plan_content,
+                    workbook_download,
+                ],
             )
 
             upload_files.upload(handle_file_upload, inputs=[upload_files], outputs=[data_files_list])
@@ -477,6 +503,36 @@ class FinnUI:
                 update_workbook_content,
                 inputs=[current_project_state, workbook_last_modified],
                 outputs=[workbook_last_modified, workbook_updated_indicator, workbook_download],
+            )
+
+            # Function to refresh all data on load
+            def refresh_all_data(current_project: str):
+                """Refresh all data when interface loads"""
+                # Load chat history
+                history = self._load_chat_history(current_project)
+                formatted_history = self._format_chat_history(history)
+
+                # Get current plan
+                plan = self._get_latest_plan(current_project)
+
+                # Get current workbook
+                _, workbook_path = self._get_latest_workbook(current_project)
+
+                # Refresh data files list
+                data_files_html = self._format_data_files_html()
+
+                return (
+                    formatted_history,
+                    plan,
+                    gr.File(value=workbook_path if workbook_path else None, visible=workbook_path is not None),
+                    gr.HTML(value=data_files_html),
+                )
+
+            # Load initial data when interface starts
+            demo.load(
+                refresh_all_data,
+                inputs=[current_project_state],
+                outputs=[chatbot, plan_content, workbook_download, data_files_list],
             )
 
         return demo

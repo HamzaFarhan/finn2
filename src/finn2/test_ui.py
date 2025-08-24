@@ -14,7 +14,6 @@ if __name__ == "__main__":
 
     print("🚀 Launching Finn UI...")
     print("📁 Workspace:", test_workspace.absolute())
-    print("🌐 URL: http://localhost:7860")
     try:
         launch_finn_ui(
             workspace_dir=test_workspace,
