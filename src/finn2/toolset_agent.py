@@ -197,8 +197,6 @@ async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated
     )
     agent_deps.dirs.message_history_path.write_bytes(res.all_messages_json())
     output = res.output
-    if isinstance(output, str):
-        return output
-    if isinstance(output, PlanCreated):
+    if isinstance(output, (str, PlanCreated)):
         return output
     return output.message
