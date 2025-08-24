@@ -130,13 +130,19 @@ def _validate_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: 
         # Step 2c: Validate sheet separator
         # Check for sheet.range syntax and suggest sheet!range
         for sheet in available_sheets:
-            # Look for "sheet." followed by a cell/range reference. This now handles A1, A:A, and A1:A10 style ranges.
-            pattern = rf"\b{re.escape(sheet)}\.([A-Z]{{1,3}}(?:\d{{1,7}})?(?::[A-Z]{{1,3}}(?:\d{{1,7}})?)?)\b"
+            # Look for "sheet." followed by a cell/range reference.
+            # This handles A1, A:A, A1:A10, and malformed ranges like H:(H)
+            pattern = rf"\b{re.escape(sheet)}\.([A-Z]{{1,3}}(?:\d{{1,7}})?(?::(?:\([A-Z]{{1,3}}\)|[A-Z]{{1,3}}(?:\d{{1,7}})?)?)?)\b"
             matches = re.finditer(pattern, formula)
             for match in matches:
+                original_range = match.group(1)
+                # Fix malformed range like H:(H) to H:H
+                corrected_range = re.sub(r":(\([A-Z]{1,3}\))", r":\1", original_range)
+                corrected_range = re.sub(r":\(([A-Z]{1,3})\)", r":\1", corrected_range)
+
                 raise FormulaError(
                     f"Unsupported sheet reference '{match.group(0)}' found. "
-                    f"Please use the standard '!' separator (e.g., '{sheet}!{match.group(1)}')."
+                    f"Please use the standard '!' separator (e.g., '{sheet}!{corrected_range}')."
                 )
 
         # Step 3: Validate Excel function names

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from pathlib import Path
-
 import logfire
 from dotenv import load_dotenv
 from dreamai.agent import AgentDeps, PlanCreated, create_agent
@@ -10,7 +8,7 @@ from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import UsageLimits
 from tenacity import retry, stop_after_attempt, wait_random
 
-from .finn_deps import DataDirs, FinnDeps, FinnToolset
+from .finn_deps import FinnDeps, FinnToolset
 from .toolsets.excel_toolsets.excel_charts_toolset import (
     apply_chart_preset,
     create_chart,
@@ -204,29 +202,3 @@ async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated
     if isinstance(output, PlanCreated):
         return output
     return output.message
-
-
-if __name__ == "__main__":
-    import asyncio
-
-    workspace_dir = Path("/Users/hamza/dev/dreamai/workspaces/session")
-    thread_id = "1"
-    agent_deps = FinnDeps(
-        dirs=DataDirs(workspace_dir=workspace_dir, thread_dir=workspace_dir / f"threads/{thread_id}"),
-        toolsets={
-            "excel_structure_toolset": excel_structure_toolset,
-            "excel_formula_toolset": excel_formula_toolset,
-            "excel_charts_toolset": excel_charts_toolset,
-            "excel_formatting_toolset": excel_formatting_toolset,
-        },
-    )
-    while True:
-        user_prompt = input("\n> ")
-        if user_prompt.lower() in ["exit", "quit", "q"]:
-            break
-        try:
-            user_prompt = Path(user_prompt.strip()).read_text()
-        except Exception:
-            pass
-        res = asyncio.run(run_agent(user_prompt, agent_deps))
-        print("\n-------------\n", res, "\n-------------\n")
