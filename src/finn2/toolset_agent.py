@@ -8,8 +8,8 @@ from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import UsageLimits
 from tenacity import retry, stop_after_attempt, wait_random
 
-from .finn_deps import FinnDeps, FinnToolset
-from .toolsets.excel_toolsets.excel_charts_toolset import (
+from finn2.finn_deps import FinnDeps, FinnToolset
+from finn2.toolsets.excel_toolsets.excel_charts_toolset import (
     apply_chart_preset,
     create_chart,
     create_chart_preset,
@@ -19,7 +19,7 @@ from .toolsets.excel_toolsets.excel_charts_toolset import (
     list_charts,
     update_chart_data,
 )
-from .toolsets.excel_toolsets.excel_formatting_toolset import (
+from finn2.toolsets.excel_toolsets.excel_formatting_toolset import (
     apply_cell_formatting,
     apply_conditional_formatting,
     apply_preset_formatting,
@@ -28,7 +28,7 @@ from .toolsets.excel_toolsets.excel_formatting_toolset import (
     list_formatting_presets,
     load_formatting_preset,
 )
-from .toolsets.excel_toolsets.excel_formula_toolset import (
+from finn2.toolsets.excel_toolsets.excel_formula_toolset import (
     build_countifs_expression,
     build_division_expression,
     write_arithmetic_operation,
@@ -44,7 +44,7 @@ from .toolsets.excel_toolsets.excel_formula_toolset import (
     write_statistical_function,
     write_text_function,
 )
-from .toolsets.excel_toolsets.excel_structure_toolset import (
+from finn2.toolsets.excel_toolsets.excel_structure_toolset import (
     add_sheet,
     add_subtotals,
     clear_sheet,
@@ -68,7 +68,7 @@ from .toolsets.excel_toolsets.excel_structure_toolset import (
     update_sheet_properties,
     write_values_to_cells,
 )
-from .toolsets.polars_toolsets.file_toolset import (
+from finn2.toolsets.polars_toolsets.file_toolset import (
     describe_file,
     list_data_files,
     list_result_files,

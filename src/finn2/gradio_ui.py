@@ -6,8 +6,8 @@ from pathlib import Path
 import gradio as gr
 import pandas as pd
 
-from .finn_deps import DataDirs, FinnDeps
-from .toolset_agent import (
+from finn2.finn_deps import DataDirs, FinnDeps
+from finn2.toolset_agent import (
     excel_charts_toolset,
     excel_formatting_toolset,
     excel_formula_toolset,
