@@ -3,7 +3,7 @@ from __future__ import annotations
 import logfire
 from dotenv import load_dotenv
 from dreamai.agent import AgentDeps, PlanCreated, create_agent
-from pydantic_ai.messages import ModelMessagesTypeAdapter
+from pydantic_ai.messages import ModelMessagesTypeAdapter, ModelResponse, TextPart
 from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import UsageLimits
 from tenacity import retry, stop_after_attempt, wait_random
@@ -173,6 +173,8 @@ file_toolset = FunctionToolset[AgentDeps](
     [describe_file, list_data_files, list_result_files], id="file_toolset", max_retries=3
 )
 
+PLAN_CREATED_RESPONSE = "Please review the plan. Shall I execute it?"
+
 
 @retry(stop=stop_after_attempt(3), wait=wait_random(min=1, max=3))
 async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated:
@@ -195,7 +197,10 @@ async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated
         else None,
         toolsets=[file_toolset],
     )
-    agent_deps.dirs.message_history_path.write_bytes(res.all_messages_json())
+    message_history = res.all_messages()
+    if isinstance(res.output, PlanCreated):
+        message_history.append(ModelResponse(parts=[TextPart(content=PLAN_CREATED_RESPONSE)]))
+    agent_deps.dirs.message_history_path.write_bytes(ModelMessagesTypeAdapter.dump_json(message_history))
     output = res.output
     if isinstance(output, (str, PlanCreated)):
         return output

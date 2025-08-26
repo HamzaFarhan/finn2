@@ -45,6 +45,9 @@ def _validate_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: 
 
     Raises:
         FormulaError: If formula has any validation errors
+
+    NOTE: When referencing another sheet in a formula, always use 'SheetName!A1'
+    syntax; 'SheetName.A1' is invalid and will raise a FormulaError.
     """
     # Ensure formula starts with =
     if not formula.startswith("="):
@@ -529,6 +532,8 @@ def _write_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: str
         SheetNotFoundError: If sheet doesn't exist
         FormulaError: If formula is invalid
         FileOperationError: If operation fails
+
+    NOTE: Cross-sheet references must use 'SheetName!A1' (never 'SheetName.A1').
     """
     try:
         excel_file = Path(excel_path)
@@ -581,6 +586,8 @@ def write_date_function(
     Example:
         result = write_date_function("file.xlsx", "Sheet1", "A1", "TODAY")
 
+    NOTE: If passing arguments that reference other sheets, use 'Sheet!A1' form,
+    not 'Sheet.A1'.
     """
     try:
         function_name = function_name.upper()
@@ -643,6 +650,7 @@ def write_financial_function(
     Example:
         result = write_financial_function("file.xlsx", "Sheet1", "A1", "PV", [0.05, 10, -1000])
 
+    NOTE: Ranges or cells on other sheets must use '!': e.g. 'CashFlows!B2:B20'.
     """
     try:
         function_name = function_name.upper()
@@ -690,6 +698,7 @@ def write_logical_function(
     Example:
         result = write_logical_function("file.xlsx", "Sheet1", "A1", "IF", ["B1>10", '"Yes"', '"No"'])
 
+    NOTE: Conditions referencing other sheets must use '!': e.g. 'Data!A1>0'.
     """
     try:
         function_name = function_name.upper()
@@ -746,6 +755,7 @@ def write_lookup_function(
     Example:
         result = write_lookup_function("file.xlsx", "Sheet1", "A1", "VLOOKUP", ["B1", "D:E", 2, "FALSE"])
 
+    NOTE: Table/range arguments on other sheets require '!': 'LookupData!A:B'.
     """
     try:
         function_name = function_name.upper()
@@ -812,6 +822,7 @@ def write_math_function(
     Example:
         result = write_math_function("file.xlsx", "Sheet1", "A1", "SUM", ["B1:B10"])
 
+    NOTE: Use 'Sheet!Range' for cross-sheet ranges (e.g. 'Metrics!C2:C10').
     """
     try:
         function_name = function_name.upper()
@@ -912,6 +923,7 @@ def write_statistical_function(
     Example:
         result = write_statistical_function("file.xlsx", "Sheet1", "A1", "AVERAGE", ["B1:B10"])
 
+    NOTE: Cross-sheet ranges must be written 'Sheet!A1:A100'.
     """
     try:
         function_name = function_name.upper()
@@ -977,6 +989,7 @@ def write_text_function(
     Example:
         result = write_text_function("file.xlsx", "Sheet1", "A1", "CONCATENATE", ["A1", "B1"])
 
+    NOTE: If referencing other sheets in arguments, use '!': 'Names!A1'.
     """
     try:
         function_name = function_name.upper()
@@ -1045,6 +1058,7 @@ def write_info_function(
     Example:
         result = write_info_function("file.xlsx", "Sheet1", "A1", "ISBLANK", ["B1"])
 
+    NOTE: Use 'Sheet!Cell' form for other sheets.
     """
     try:
         function_name = function_name.upper()
@@ -1092,6 +1106,7 @@ def write_arithmetic_operation(
     Example:
         result = write_arithmetic_operation("file.xlsx", "Sheet1", "A1", "DIVIDE", ["B1", "C1"])
 
+    NOTE: Provide operands with 'Sheet!Ref' for cross-sheet inputs.
     """
     try:
         operation = operation.upper()
@@ -1156,6 +1171,7 @@ def write_comparison_operation(
     Example:
         result = write_comparison_operation("file.xlsx", "Sheet1", "A1", "B1", ">", "10")
 
+    NOTE: Cross-sheet operands must use '!': e.g. 'Sheet2!B1'.
     """
     try:
         valid_operators = {"=", "<>", "<", ">", "<=", ">="}
@@ -1199,6 +1215,7 @@ def write_nested_function(
                             ["COUNTIFS(C:C,\"Pro\",E:E,\"<=2023-01-01\")=0"],
                             ["1/B3", "COUNTIFS(F:F,\"<=2023-12-31\")"])
 
+    NOTE: All inner/outer function arguments referencing other sheets must use '!'.
     """
     try:
         outer_function = outer_function.upper()
@@ -1242,6 +1259,7 @@ def write_conditional_formula(
                                 "1/B3",
                                 "COUNTIFS(F:F,\"Churned\")/COUNTIFS(C:C,\"Pro\")")
 
+    NOTE: Any cross-sheet references in condition/values must use '!'.
     """
     try:
         formula = f"IF({condition},{true_value},{false_value})"
@@ -1270,6 +1288,8 @@ def build_countifs_expression(range_criteria_pairs: list[tuple[str, str]]) -> st
             ("Raw_Subscriptions!E:E", "\"<=2023-01-01\"")
         ])
         # Returns: 'COUNTIFS(Raw_Subscriptions!C:C,"Pro",Raw_Subscriptions!E:E,"<=2023-01-01")'
+
+    NOTE: Pass ranges with '!': e.g. ('Sales!C:C', '"OK"').
     """
     if not range_criteria_pairs:
         raise FormulaError("COUNTIFS requires at least one range-criteria pair")
@@ -1296,6 +1316,8 @@ def build_division_expression(numerator: str, denominator: str) -> str:
     Example:
         build_division_expression("COUNTIFS(A:A,\"Yes\")", "COUNTIFS(B:B,\"Total\")")
         # Returns: 'COUNTIFS(A:A,"Yes")/COUNTIFS(B:B,"Total")'
+
+    NOTE: Use 'Sheet!Expr' for cross-sheet parts: 'Summary!A1/Raw!B1'.
     """
     return f"{numerator}/{denominator}"
 

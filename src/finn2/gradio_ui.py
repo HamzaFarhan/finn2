@@ -8,6 +8,8 @@ import pandas as pd
 
 from finn2.finn_deps import DataDirs, FinnDeps
 from finn2.toolset_agent import (
+    PLAN_CREATED_RESPONSE,
+    PlanCreated,
     excel_charts_toolset,
     excel_formatting_toolset,
     excel_formula_toolset,
@@ -164,6 +166,8 @@ class FinnUI:
             response = await run_agent(message, agent_deps)
             if isinstance(response, str):
                 history.append({"finn": response})
+            elif isinstance(response, PlanCreated):
+                history.append({"finn": PLAN_CREATED_RESPONSE})
         except Exception as e:
             response = f"Error: {str(e)}"
             history.append({"finn": response})
