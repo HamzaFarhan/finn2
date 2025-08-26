@@ -186,6 +186,15 @@ async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated
             "Add orders.csv as a sheet called 'Orders'.\n"
             "Use the formula: =SUM('Q1 Sales'!B2:B10) to calculate the total sales for Q1.\n\n"
             "This makes it easier for the user to approve/reject/iterate on the steps with you before executing them."
+            "For formatting we have some best practices:\n"
+            "Cell Color:\n"
+            "Blue - applied to hard-coded inputs, which could be historical information or some of the other inputs.\n"
+            "Black - applied to calculations and references within the same worksheet.\n"
+            "Green - applied to references in the same Excel file but outside of the model worksheet.\n"
+            "Red - applied to external references/links (other Excel files).\n"
+            "Assumptions:\n"
+            "Follow the color scheme above and highlighted light yellow.\n"
+            "Never hardcode a number, date or name in a formula, always have a reference. These references are separate from the assumption tables."
         )
     )
     res = await agent.run(
