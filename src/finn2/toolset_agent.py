@@ -195,6 +195,7 @@ async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated
             "Assumptions:\n"
             "Follow the color scheme above and highlighted light yellow.\n"
             "Never hardcode a number, date or name in a formula, always have a reference. These references are separate from the assumption tables."
+            "Of course, these are just initial preferences and can be adjusted based on user feedback during a specific task."
         )
     )
     res = await agent.run(
