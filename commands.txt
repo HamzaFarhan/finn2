@@ -1,0 +1,12 @@
+gcloud compute ssh --zone "us-central1-c" "apps-demo" --project "dreamai-pocs"
+
+sudo su -
+
+# Update Code:
+cd /opt/apps-demo/operateai-app-new2/finn2 && git pull && docker build . -f Dockerfile -t gcr.io/dreamai-pocs/finn2-bkend-app:v1 && cd /opt/apps-demo/operateai-app-new2 && docker-compose down && docker-compose up -d
+
+
+# Check logs:
+docker logs -f finn2-bkend-app
+
+# URL: http://34.170.237.144:5588/

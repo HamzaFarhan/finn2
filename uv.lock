@@ -498,7 +498,7 @@ wheels = [
 
 [[package]]
 name = "dreamai"
-version = "4.2.11"
+version = "4.2.12"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "docstring-parser" },
@@ -518,9 +518,9 @@ dependencies = [
     { name = "watchdog" },
     { name = "xlwings" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c3/f4/9f9d49fb54deb862da69e00a82c209b48728b2a0529c7395dc4c6482fc9a/dreamai-4.2.11.tar.gz", hash = "sha256:dbd4692fe2229efd5f69ae5a84a124d1d29d986512abc9ec767a9d9b67d841a5", size = 137749, upload-time = "2025-08-26T09:50:14.664Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/b4/f4e7b502505166a453266a32cd04ae896e1bcfe571ed96196acaf319af13/dreamai-4.2.12.tar.gz", hash = "sha256:c479ba859cb79315bb905d48815efbdbbced9c3a164569c7566341e70a01b4d9", size = 137763, upload-time = "2025-08-26T14:13:32.56Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5d/4f/c135576d82333dd586aa0b965fccd884c5ff7f660bb35206c2584f854719/dreamai-4.2.11-py3-none-any.whl", hash = "sha256:5e56f84541d0dbb54a9e3a46711c1e5fac0c30d60f3690019621d397bdf43aab", size = 8658, upload-time = "2025-08-26T09:50:13.384Z" },
+    { url = "https://files.pythonhosted.org/packages/73/2c/db31d3ce82cb2d2ee8811776785ad1cc3871d558ab8bd1cef34456e64be3/dreamai-4.2.12-py3-none-any.whl", hash = "sha256:102f82f8030aa666f09f9336ff112ac1062e18e50e0c437b236aaa5db037911f", size = 8667, upload-time = "2025-08-26T14:13:30.165Z" },
 ]
 
 [[package]]
@@ -621,7 +621,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "dreamai", specifier = ">=4.2.11" },
+    { name = "dreamai", specifier = ">=4.2.12" },
     { name = "gradio", specifier = ">=5.43.1" },
     { name = "ipykernel", specifier = ">=6.30.1" },
     { name = "logfire", extras = ["httpx"], specifier = ">=4.2.0" },
@@ -841,14 +841,14 @@ wheels = [
 
 [[package]]
 name = "griffe"
-version = "1.12.1"
+version = "1.13.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "colorama" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/81/ca/29f36e00c74844ae50d139cf5a8b1751887b2f4d5023af65d460268ad7aa/griffe-1.12.1.tar.gz", hash = "sha256:29f5a6114c0aeda7d9c86a570f736883f8a2c5b38b57323d56b3d1c000565567", size = 411863, upload-time = "2025-08-14T21:08:15.38Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c6/b5/23b91f22b7b3a7f8f62223f6664946271c0f5cb4179605a3e6bbae863920/griffe-1.13.0.tar.gz", hash = "sha256:246ea436a5e78f7fbf5f24ca8a727bb4d2a4b442a2959052eea3d0bfe9a076e0", size = 412759, upload-time = "2025-08-26T13:27:11.422Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/f2/4fab6c3e5bcaf38a44cc8a974d2752eaad4c129e45d6533d926a30edd133/griffe-1.12.1-py3-none-any.whl", hash = "sha256:2d7c12334de00089c31905424a00abcfd931b45b8b516967f224133903d302cc", size = 138940, upload-time = "2025-08-14T21:08:13.382Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/8c/b7cfdd8dfe48f6b09f7353323732e1a290c388bd14f216947928dc85f904/griffe-1.13.0-py3-none-any.whl", hash = "sha256:470fde5b735625ac0a36296cd194617f039e9e83e301fcbd493e2b58382d0559", size = 139365, upload-time = "2025-08-26T13:27:09.882Z" },
 ]
 
 [[package]]
