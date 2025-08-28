@@ -825,6 +825,9 @@ def write_math_function(
                         ROUNDUP, SIGN, SIN, SQRT, SUM, SUMIF, SUMIFS,
                         SUMPRODUCT, TAN, TRUNC
 
+    IMPORTANT: For boolean columns (TRUE/FALSE values), use COUNTIFS instead of SUMIFS
+    to count occurrences. SUMIFS on boolean columns may return unexpected results.
+
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
@@ -1291,6 +1294,9 @@ def write_conditional_formula(
 def build_countifs_expression(range_criteria_pairs: list[tuple[str, str]]) -> str:
     """
     Builds a COUNTIFS expression string.
+
+    TIP: Use COUNTIFS instead of SUMIFS for boolean columns (TRUE/FALSE values)
+    to accurately count occurrences rather than sum numerical equivalents.
 
     Args:
         range_criteria_pairs: List of (range, criteria) tuples
