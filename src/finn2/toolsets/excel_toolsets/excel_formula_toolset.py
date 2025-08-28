@@ -543,7 +543,7 @@ def _write_formula(excel_path: str, sheet_name: str, cell_ref_or_range: str, for
         # openpyxl handles applying the same formula to a range,
         # automatically adjusting relative references.
         cells = ws[cell_ref_or_range]
-        
+
         # Handle single cell vs range of cells
         if ":" in cell_ref_or_range:
             # Range of cells - cells is a tuple of rows
