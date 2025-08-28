@@ -542,9 +542,17 @@ def _write_formula(excel_path: str, sheet_name: str, cell_ref_or_range: str, for
         # Apply the formula to the cell or range of cells.
         # openpyxl handles applying the same formula to a range,
         # automatically adjusting relative references.
-        for row in ws[cell_ref_or_range]:
-            for cell in row:
-                cell.value = formula
+        cells = ws[cell_ref_or_range]
+        
+        # Handle single cell vs range of cells
+        if ":" in cell_ref_or_range:
+            # Range of cells - cells is a tuple of rows
+            for row in cells:
+                for cell in row:
+                    cell.value = formula
+        else:
+            # Single cell - cells is a single Cell object
+            cells.value = formula
 
         wb.save(excel_path)
 
@@ -558,7 +566,11 @@ def _write_formula(excel_path: str, sheet_name: str, cell_ref_or_range: str, for
 
 # Date Functions
 def write_date_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, function_args: list[Any] | None = None
+    excel_path: str,
+    sheet_name: str,
+    cell_ref_or_range: str,
+    function_name: str,
+    function_args: list[Any] | None = None,
 ) -> str:
     """
     Writes date functions to Excel cells.
@@ -568,7 +580,7 @@ def write_date_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the date function
         function_args: Function arguments
 
@@ -612,7 +624,7 @@ def write_date_function(
         else:
             formula = f"{function_name}()"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -622,7 +634,7 @@ def write_date_function(
 
 # Financial Functions
 def write_financial_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, function_args: list[Any]
+    excel_path: str, sheet_name: str, cell_ref_or_range: str, function_name: str, function_args: list[Any]
 ) -> str:
     """
     Writes financial functions to Excel cells.
@@ -632,7 +644,7 @@ def write_financial_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the financial function
         function_args: Function arguments
 
@@ -660,7 +672,7 @@ def write_financial_function(
         args_str = ",".join(str(arg) for arg in function_args)
         formula = f"{function_name}({args_str})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -670,7 +682,11 @@ def write_financial_function(
 
 # Logical Functions
 def write_logical_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, conditions: list[Any] | None = None
+    excel_path: str,
+    sheet_name: str,
+    cell_ref_or_range: str,
+    function_name: str,
+    conditions: list[Any] | None = None,
 ) -> str:
     """
     Writes logical functions to Excel cells.
@@ -680,7 +696,7 @@ def write_logical_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the logical function
         conditions: Function conditions/arguments
 
@@ -716,7 +732,7 @@ def write_logical_function(
             conditions_str = ",".join(str(condition) for condition in conditions)
             formula = f"{function_name}({conditions_str})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -726,7 +742,11 @@ def write_logical_function(
 
 # Lookup Functions
 def write_lookup_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, function_args: list[Any] | None = None
+    excel_path: str,
+    sheet_name: str,
+    cell_ref_or_range: str,
+    function_name: str,
+    function_args: list[Any] | None = None,
 ) -> str:
     """
     Writes lookup functions to Excel cells.
@@ -737,7 +757,7 @@ def write_lookup_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the lookup function
         function_args: Function arguments
 
@@ -779,7 +799,7 @@ def write_lookup_function(
         else:
             formula = f"{function_name}()"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -898,7 +918,7 @@ def write_math_function(
 
 # Statistical Functions
 def write_statistical_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, function_args: list[Any]
+    excel_path: str, sheet_name: str, cell_ref_or_range: str, function_name: str, function_args: list[Any]
 ) -> str:
     """
     Writes statistical functions to Excel cells.
@@ -909,7 +929,7 @@ def write_statistical_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the statistical function
         function_args: Function data/arguments
 
@@ -953,7 +973,7 @@ def write_statistical_function(
         args_str = ",".join(str(item) for item in function_args)
         formula = f"{function_name}({args_str})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -963,7 +983,7 @@ def write_statistical_function(
 
 # Text Functions
 def write_text_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, function_args: list[Any]
+    excel_path: str, sheet_name: str, cell_ref_or_range: str, function_name: str, function_args: list[Any]
 ) -> str:
     """
     Writes text functions to Excel cells.
@@ -975,7 +995,7 @@ def write_text_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the text function
         function_args: Function text arguments
 
@@ -1024,7 +1044,7 @@ def write_text_function(
         args_str = ",".join(str(arg) for arg in function_args)
         formula = f"{function_name}({args_str})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -1034,7 +1054,7 @@ def write_text_function(
 
 # Info Functions
 def write_info_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, function_args: list[Any]
+    excel_path: str, sheet_name: str, cell_ref_or_range: str, function_name: str, function_args: list[Any]
 ) -> str:
     """
     Writes info functions to Excel cells.
@@ -1044,7 +1064,7 @@ def write_info_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the info function
         function_args: Function arguments
 
@@ -1072,7 +1092,7 @@ def write_info_function(
         args_str = ",".join(str(arg) for arg in function_args)
         formula = f"{function_name}({args_str})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -1082,7 +1102,7 @@ def write_info_function(
 
 # Arithmetic Operations
 def write_arithmetic_operation(
-    excel_path: str, sheet_name: str, cell_ref: str, operation: str, operands: list[str]
+    excel_path: str, sheet_name: str, cell_ref_or_range: str, operation: str, operands: list[str]
 ) -> str:
     """
     Writes arithmetic operations to Excel cells.
@@ -1092,7 +1112,7 @@ def write_arithmetic_operation(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         operation: Type of arithmetic operation
         operands: List of cell references, values, or nested expressions
 
@@ -1137,7 +1157,7 @@ def write_arithmetic_operation(
                 raise FormulaError("POWER operation requires exactly 2 operands")
             formula = f"POWER({operands[0]},{operands[1]})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -1146,7 +1166,7 @@ def write_arithmetic_operation(
 
 
 def write_comparison_operation(
-    excel_path: str, sheet_name: str, cell_ref: str, left_operand: str, operator: str, right_operand: str
+    excel_path: str, sheet_name: str, cell_ref_or_range: str, left_operand: str, operator: str, right_operand: str
 ) -> str:
     """
     Writes comparison operations to Excel cells.
@@ -1156,7 +1176,7 @@ def write_comparison_operation(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         left_operand: Left side of comparison (cell reference, value, or expression)
         operator: Comparison operator
         right_operand: Right side of comparison (cell reference, value, or expression)
@@ -1176,7 +1196,7 @@ def write_comparison_operation(
             raise FormulaError(f"Invalid operator: {operator}. Valid operators: {sorted(valid_operators)}")
 
         formula = f"{left_operand}{operator}{right_operand}"
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -1187,7 +1207,7 @@ def write_comparison_operation(
 def write_nested_function(
     excel_path: str,
     sheet_name: str,
-    cell_ref: str,
+    cell_ref_or_range: str,
     outer_function: str,
     inner_functions: list[str],
     outer_args: list[str] | None = None,
@@ -1198,7 +1218,7 @@ def write_nested_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         outer_function: Name of the outer function (e.g., "IF", "SUM")
         inner_functions: List of inner function expressions
         outer_args: Additional arguments for the outer function
@@ -1224,7 +1244,7 @@ def write_nested_function(
         args_str = ",".join(all_args)
         formula = f"{outer_function}({args_str})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -1233,7 +1253,7 @@ def write_nested_function(
 
 
 def write_conditional_formula(
-    excel_path: str, sheet_name: str, cell_ref: str, condition: str, true_value: str, false_value: str
+    excel_path: str, sheet_name: str, cell_ref_or_range: str, condition: str, true_value: str, false_value: str
 ) -> str:
     """
     Writes IF conditional formulas to Excel cells.
@@ -1241,7 +1261,7 @@ def write_conditional_formula(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         condition: Condition to evaluate
         true_value: Value/expression when condition is true
         false_value: Value/expression when condition is false
@@ -1259,7 +1279,7 @@ def write_conditional_formula(
     """
     try:
         formula = f"IF({condition},{true_value},{false_value})"
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
@@ -1285,7 +1305,7 @@ def build_countifs_expression(range_criteria_pairs: list[tuple[str, str]]) -> st
         ])
         # Returns: 'COUNTIFS(Raw_Subscriptions!C:C,"Pro",Raw_Subscriptions!E:E,"<=2023-01-01")'
 
-    NOTE: Pass ranges with '!': e.g. ('Sales!C:C', '"OK"').
+    NOTE: Pass ranges with '!': e.g. ('Sheet!C:C', '"OK"').
     """
     if not range_criteria_pairs:
         raise FormulaError("COUNTIFS requires at least one range-criteria pair")
