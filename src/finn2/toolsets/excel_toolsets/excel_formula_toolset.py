@@ -37,6 +37,8 @@ def _validate_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: 
     4. Detecting division by zero
     5. Evaluating the formula to catch runtime errors
 
+    NOTE: Array formulas are not supported.
+
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the sheet containing the formula
@@ -155,14 +157,6 @@ def _validate_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: 
 
         # Common Excel functions (expanded list, including functions with #)
         valid_excel_functions = {
-            # Add functions with special characters
-            "XLOOKUP#",
-            "LET#",
-            "FILTER#",
-            "UNIQUE#",
-            "SORT#",
-            "SEQUENCE#",
-            "LAMBDA#",
             # Math & Trig
             "ABS",
             "ACOS",
@@ -348,19 +342,6 @@ def _validate_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: 
             "OCT2BIN",
             "OCT2DEC",
             "OCT2HEX",
-            # Array formulas
-            "TRANSPOSE",
-            "MMULT",
-            "MINVERSE",
-            "MDETERM",
-            # Modern Excel functions with special characters
-            "XLOOKUP#",
-            "LET#",
-            "FILTER#",
-            "UNIQUE#",
-            "SORT#",
-            "SEQUENCE#",
-            "LAMBDA#",
         }
 
         for func_name in function_matches:
@@ -514,14 +495,16 @@ def _validate_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: 
         raise FormulaError(f"Formula validation failed: {e}")
 
 
-def _write_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: str) -> str:
+def _write_formula(excel_path: str, sheet_name: str, cell_ref_or_range: str, formula: str) -> str:
     """
-    Helper function to write a formula to a cell.
+    Helper function to write a formula to a cell or a range of cells.
+
+    NOTE: Array formulas are not supported.
 
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         formula: Excel formula (without leading =)
 
     Returns:
@@ -549,11 +532,20 @@ def _write_formula(excel_path: str, sheet_name: str, cell_ref: str, formula: str
         if sheet_name not in wb.sheetnames:
             raise SheetNotFoundError(f"Sheet '{sheet_name}' not found")
 
-        # Validate the formula before writing
-        _validate_formula(excel_path, sheet_name, cell_ref, formula)
-
         ws = wb[sheet_name]
-        ws[cell_ref] = formula
+
+        # Use the top-left cell of the range for validation purposes.
+        # This assumes the formula is valid for the entire range.
+        first_cell = cell_ref_or_range.split(":")[0]
+        _validate_formula(excel_path, sheet_name, first_cell, formula)
+
+        # Apply the formula to the cell or range of cells.
+        # openpyxl handles applying the same formula to a range,
+        # automatically adjusting relative references.
+        for row in ws[cell_ref_or_range]:
+            for cell in row:
+                cell.value = formula
+
         wb.save(excel_path)
 
         return str(excel_file.absolute())
@@ -797,7 +789,11 @@ def write_lookup_function(
 
 # Math Functions
 def write_math_function(
-    excel_path: str, sheet_name: str, cell_ref: str, function_name: str, function_args: list[Any] | None = None
+    excel_path: str,
+    sheet_name: str,
+    cell_ref_or_range: str,
+    function_name: str,
+    function_args: list[Any] | None = None,
 ) -> str:
     """
     Writes math functions to Excel cells.
@@ -812,7 +808,7 @@ def write_math_function(
     Args:
         excel_path: Path to the Excel file
         sheet_name: Name of the target sheet
-        cell_ref: Cell reference (e.g., 'A1')
+        cell_ref_or_range: Cell reference (e.g., 'A1') or range (e.g., 'A1:A10')
         function_name: Name of the math function
         function_args: Function arguments
 
@@ -820,7 +816,7 @@ def write_math_function(
         str: Excel file path
 
     Example:
-        result = write_math_function("file.xlsx", "Sheet1", "A1", "SUM", ["B1:B10"])
+        result = write_math_function("file.xlsx", "Sheet1", "A1:A10", "SUM", ["B1:B10"])
 
     NOTE: Use 'Sheet!Range' for cross-sheet ranges (e.g. 'Metrics!C2:C10').
     """
@@ -892,7 +888,7 @@ def write_math_function(
             args_str = ",".join(str(arg) for arg in function_args)
             formula = f"{function_name}({args_str})"
 
-        return _write_formula(excel_path, sheet_name, cell_ref, formula)
+        return _write_formula(excel_path, sheet_name, cell_ref_or_range, formula)
 
     except FormulaError:
         raise
