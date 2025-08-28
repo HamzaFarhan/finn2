@@ -93,6 +93,23 @@ def describe_file(ctx: RunContext[FinnDeps], file_path: str) -> dict[str, Any]:
             res["description"] = df.describe().to_dicts()
         except Exception as e:
             logger.error(f"Error describing DataFrame: {e}")
+
+        try:
+            unique_values_info = {}
+            for col_name in df.columns:
+                try:
+                    n_unique = df[col_name].n_unique()
+                    if n_unique < 20:
+                        unique_values = df[col_name].unique().to_list()
+                        unique_values_info[col_name] = unique_values
+                    else:
+                        unique_values_info[col_name] = f"{n_unique} unique values (too many to list)"
+                except Exception:
+                    pass  # Ignore columns that don't support n_unique, or other errors
+            res["unique_values"] = unique_values_info
+        except Exception:
+            pass
+
         return res
     except Exception as e:
         raise ModelRetry(f"Error in describe_file: {e}")
