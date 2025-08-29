@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import logfire
 from dotenv import load_dotenv
 from dreamai.agent import AgentDeps, PlanCreated, create_agent
@@ -178,30 +180,7 @@ PLAN_CREATED_RESPONSE = "Please review the plan. Shall I execute it?"
 
 @retry(stop=stop_after_attempt(3), wait=wait_random(min=1, max=3))
 async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated:
-    agent = create_agent(
-        instructions=(
-            "When creating the steps, explicitly state stuff.\n"
-            "Examples:\n"
-            "'Create a new Excel file named 'Sales_Data.xlsx' and add a sheet called 'Q1 Sales'.'"
-            "Add orders.csv as a sheet called 'Orders'.\n"
-            "Use the formula: =SUM('Q1 Sales'!B2:B10) to calculate the total sales for Q1.\n\n"
-            "This makes it easier for the user to approve/reject/iterate on the steps with you before executing them.\n"
-            "Complex Formula Approach:\n"
-            "When a complex formula is needed, break it down into helper columns and then use those columns in the final simplified formula. "
-            "For example, instead of a single complex formula like =IF(AND(A2>100,B2<50),C2*D2*0.1,IF(E2='Premium',C2*D2*0.15,C2*D2*0.05)), "
-            "create helper columns for intermediate calculations and conditions by applying a formula to a range of cells, then reference those in a simpler final formula.\n"
-            "For formatting we have some best practices:\n"
-            "Cell Color:\n"
-            "Blue - applied to hard-coded inputs, which could be historical information or some of the other inputs.\n"
-            "Black - applied to calculations and references within the same worksheet.\n"
-            "Green - applied to references in the same Excel file but outside of the model worksheet.\n"
-            "Red - applied to external references/links (other Excel files).\n"
-            "Assumptions:\n"
-            "Follow the color scheme above and highlighted light yellow.\n"
-            "Never hardcode a number, date or name in a formula, always have a reference. These references are separate from the assumption tables."
-            "Of course, these are just initial preferences and can be adjusted based on user feedback during a specific task."
-        )
-    )
+    agent = create_agent(instructions=Path("./prompt.md").read_text())
     res = await agent.run(
         user_prompt,
         deps=agent_deps,
