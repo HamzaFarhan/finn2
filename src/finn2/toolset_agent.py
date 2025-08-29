@@ -189,7 +189,7 @@ async def run_agent(user_prompt: str, agent_deps: FinnDeps) -> str | PlanCreated
             "Complex Formula Approach:\n"
             "When a complex formula is needed, break it down into helper columns and then use those columns in the final simplified formula. "
             "For example, instead of a single complex formula like =IF(AND(A2>100,B2<50),C2*D2*0.1,IF(E2='Premium',C2*D2*0.15,C2*D2*0.05)), "
-            "create helper columns for intermediate calculations and conditions, then reference those in a simpler final formula.\n"
+            "create helper columns for intermediate calculations and conditions by applying a formula to a range of cells, then reference those in a simpler final formula.\n"
             "For formatting we have some best practices:\n"
             "Cell Color:\n"
             "Blue - applied to hard-coded inputs, which could be historical information or some of the other inputs.\n"

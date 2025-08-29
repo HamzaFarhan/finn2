@@ -5,6 +5,7 @@ from typing import Any
 
 import formulas  # type: ignore
 from openpyxl import load_workbook
+from openpyxl.formula.translate import Translator
 
 
 # Custom Exceptions
@@ -539,20 +540,42 @@ def _write_formula(excel_path: str, sheet_name: str, cell_ref_or_range: str, for
         first_cell = cell_ref_or_range.split(":")[0]
         _validate_formula(excel_path, sheet_name, first_cell, formula)
 
-        # Apply the formula to the cell or range of cells.
-        # openpyxl handles applying the same formula to a range,
-        # automatically adjusting relative references.
-        cells = ws[cell_ref_or_range]
-
-        # Handle single cell vs range of cells
+        # Apply the formula to the cell or range of cells
         if ":" in cell_ref_or_range:
-            # Range of cells - cells is a tuple of rows
-            for row in cells:
-                for cell in row:
-                    cell.value = formula
+            # Handle range of cells using Translator for proper relative reference adjustment
+            start_cell = cell_ref_or_range.split(":")[0]
+
+            # Get the range boundaries
+            from openpyxl.utils import range_boundaries
+
+            boundaries = range_boundaries(cell_ref_or_range)
+            min_col, min_row, max_col, max_row = boundaries
+            # Type assertions for the linter
+            min_col = int(min_col) if min_col is not None else 1
+            min_row = int(min_row) if min_row is not None else 1
+            max_col = int(max_col) if max_col is not None else 1
+            max_row = int(max_row) if max_row is not None else 1
+
+            # Create translator with the original formula and its origin cell
+            translator = Translator(formula, origin=start_cell)
+
+            # Apply translated formula to each cell in the range
+            for row in range(min_row, max_row + 1):
+                for col in range(min_col, max_col + 1):
+                    # Convert column number back to letter
+                    col_letter = ""
+                    temp_col = col
+                    while temp_col > 0:
+                        temp_col -= 1
+                        col_letter = chr(temp_col % 26 + ord("A")) + col_letter
+                        temp_col //= 26
+
+                    target_cell = f"{col_letter}{row}"
+                    translated_formula = translator.translate_formula(target_cell)  # type: ignore
+                    ws[target_cell].value = translated_formula
         else:
-            # Single cell - cells is a single Cell object
-            cells.value = formula
+            # Single cell
+            ws[cell_ref_or_range].value = formula
 
         wb.save(excel_path)
 
