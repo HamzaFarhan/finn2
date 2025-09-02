@@ -4,6 +4,7 @@ sudo su -
 
 cd /opt/apps-demo/operateai-app-new2/finn2 && git pull && docker build . -f Dockerfile -t gcr.io/dreamai-pocs/finn2-bkend-app:v1 && cd /opt/apps-demo/operateai-app-new2 && docker-compose down && docker-compose up -d
 
+cd /opt/data/finn2/data/workspaces/test_workspace/threads
 
 # Check logs:
 docker logs -f finn2-bkend-app
