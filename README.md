@@ -17,7 +17,7 @@ We decided to go with SQL and leverage DuckDB's powerful SQL engine for financia
 - **Performance:** Memory-optimized processing for large datasets
 - **Flexibility:** Dynamic query generation vs. fixed function library
 
-### Approach 3: Graph-Based SQL Architecture (cfo_graph.py)
+### Approach 3: Graph-Based SQL Architecture
 We implemented the SQL approach using a complex graph-based workflow system:
 - **Pydantic Graph:** State machine for agent interactions with SQL execution
 - **Multiple Node Types:** RunSQLNode, WriteSheetNode, UserInteractionNode, TaskResultNode
@@ -26,7 +26,7 @@ We implemented the SQL approach using a complex graph-based workflow system:
 
 **Challenge Discovered:** The graph architecture was unnecessarily complex for our use case, adding overhead without significant benefits for the financial analysis workflows we needed to support.
 
-### Approach 4: Simplified SQL Agent Architecture (finn.py)
+### Approach 4: Simplified SQL Agent Architecture
 We simplified to a clean agent-based architecture while keeping the SQL approach:
 - **Single Agent:** Streamlined interaction model with direct SQL execution
 - **DuckDB Integration:** Direct SQL queries without graph complexity
@@ -114,7 +114,7 @@ This approach maintains all the benefits of comprehensive Excel formula generati
 
 ### Core Components
 
-#### 1. Two-Mode Financial Analysis Agent (`agent.py` + `toolset_agent.py`)
+#### 1. Two-Mode Financial Analysis Agent
 The main CFO agent with a dual-mode architecture:
 - **PLAN Mode:** Creates systematic plans using only tool descriptions, no actual tool access
 - **ACT Mode:** Executes plans step-by-step with on-demand toolset loading
@@ -139,7 +139,7 @@ The main CFO agent with a dual-mode architecture:
 
 **Key Innovation:** Mode-based tool availability ensures agents only see relevant tools at each phase, dramatically reducing cognitive load while maintaining full functionality access.
 
-#### 3. Memory System (`memory_tools.py` + `memory_mcp.py`)
+#### 3. Memory System
 **Persistent Knowledge Graph:**
 - **Entity-Based:** Stores business concepts, calculation methods, user preferences
 - **Relationship Mapping:** Connects related financial concepts and methodologies
@@ -153,7 +153,7 @@ The main CFO agent with a dual-mode architecture:
 - User preferences and feedback patterns
 - SQL optimization patterns
 
-#### 4. Four On-Demand Excel Toolsets (`excel_toolsets/`)
+#### 4. Four On-Demand Excel Toolsets
 **Modular Toolset Architecture with On-Demand Loading:**
 
 **Excel Structure Toolset (21 tools):**
@@ -189,7 +189,7 @@ The main CFO agent with a dual-mode architecture:
 - **Cross-Sheet Support:** Advanced multi-sheet references and complex workbook structures
 - **Professional Output:** Finance-ready workbooks with proper formatting and documentation
 
-#### 6. Thinking Framework (`thinking.py`)
+#### 6. Thinking Framework
 **Structured Reasoning:**
 - `think()`: Internal reasoning and problem breakdown
 - `analyze()`: Result evaluation and next action determination
@@ -253,7 +253,7 @@ The main CFO agent with a dual-mode architecture:
 
 ## Excel Toolsets Architecture
 
-### 1. Excel Formula Toolset (`excel_formula_toolset.py`)
+### 1. Excel Formula Toolset
 **Core Formula Generation Engine:** 1,391 lines of comprehensive formula validation and generation
 
 **Formula Categories:**
@@ -277,7 +277,7 @@ The main CFO agent with a dual-mode architecture:
 - **Error Detection:** Comprehensive error checking for division by zero, invalid references, and malformed ranges
 - **Expression Builders:** Helper functions for building complex COUNTIFS and division expressions
 
-### 2. Excel Structure Toolset (`excel_structure_toolset.py`)
+### 2. Excel Structure Toolset
 **Workbook and Data Management Engine:** 1,844 lines of comprehensive Excel structure management
 
 **Core Capabilities:**
@@ -298,7 +298,7 @@ The main CFO agent with a dual-mode architecture:
 - **Cross-Sheet Operations:** Copy sheets between workbooks with formatting preservation
 - **Professional Formatting:** Auto-sizing columns and rows with data type-specific width adjustments
 
-### 3. Excel Formatting Toolset (`excel_formatting_toolset.py`)
+### 3. Excel Formatting Toolset
 **Professional Styling and Conditional Formatting Engine:** 625 lines of advanced formatting capabilities
 
 **Formatting Categories:**
@@ -314,7 +314,7 @@ The main CFO agent with a dual-mode architecture:
 - **Format Validation:** Comprehensive validation of color formats and condition parameters
 - **Preset Management:** JSON-based preset storage system for reusable formatting configurations
 
-### 4. Excel Charts Toolset (`excel_charts_toolset.py`)
+### 4. Excel Charts Toolset
 **Professional Chart Creation Engine:** 872 lines of comprehensive visualization capabilities
 
 **Chart Types:**
