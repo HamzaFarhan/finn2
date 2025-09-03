@@ -8,7 +8,7 @@ Initially, we considered creating a comprehensive library of Polars functions fo
 - Excel-like function interfaces
 - Type-safe data transformations
 
-**Challenge Discovered:** This approach led to approximately 200 possible tools, creating an overwhelming and unwieldy system that would be difficult to maintain and use effectively.
+**Challenge Discovered:** This approach led to approximately 200 possible tools, which were too many for the agent to handle effectively.
 
 ### Approach 2: Pivot to DuckDB + SQL
 We decided to go with SQL and leverage DuckDB's powerful SQL engine for financial analysis:
@@ -104,11 +104,77 @@ Building on the challenge identified in Approach 6, we completely rewrote the ag
 **Benefits:**
 - **Reduced Cognitive Load:** Agent chooses from <20 tools at any given time
 - **Better Tool Selection:** More focused and accurate tool usage
-- **Maintained Functionality:** Full access to all 200+ functions when needed
+- **Maintained Functionality:** Full access to all ~50 functions when needed
 - **Clear Planning:** Systematic approach with toolset requirements specified upfront
 - **Improved Performance:** Less decision paralysis, faster execution
 
 This approach maintains all the benefits of comprehensive Excel formula generation while solving the tool selection overwhelm problem through intelligent architectural design.
+
+## Current Issues with Approach 7
+
+Despite the architectural improvements, several challenges have emerged with the current Excel-focused implementation:
+
+### Agent Performance Issues
+- **Chart Generation Struggles:** The agent continues to have difficulty with chart creation and visualization tasks
+- **Formula Complexity:** Agent tends to use overly complex formulas even when helper columns would provide clearer, more maintainable solutions
+- **Formula Errors:** Generated formulas sometimes contain value or name errors, requiring additional user prompts to resolve
+- **Trajectory Problems:** Agent doesn't follow optimal analytical paths (e.g., failing to extract unique customers when customer uniqueness is obviously required for the analysis)
+
+### Excel Limitations
+- **Analytical Constraints:** Excel's formula-based approach is limiting compared to the powerful analytical capabilities of modern data processing libraries like Polars
+- **Performance Issues:** Complex financial analyses are slower and more error-prone in Excel compared to optimized data processing engines
+
+## Next Approaches to Try
+
+### Approach 8: Return to Polars with Categorical Loading + Recipe System
+
+Building on the lessons learned from all previous approaches, we're planning to implement a hybrid solution that combines the best aspects of our architectural innovations:
+
+#### Core Strategy: Polars Functions with Plan-Act Agent
+- **Return to Polars:** Leverage Polars' superior analytical capabilities for complex financial calculations
+- **Categorical Tool Loading:** Use the successful plan-act architecture from Approach 7, but load Polars function categories instead of Excel toolsets
+- **Never Load All Tools:** Maintain the cognitive load optimization by fetching specific categories per step, never loading all ~200 tools simultaneously
+- **Excel Output with Documentation:** Generate final results as Excel/CSV files containing calculated values (not Excel formulas) with detailed calculation notes explaining how values were derived
+
+#### Key Architectural Components:
+1. **Plan-Act Framework:** Maintain the two-mode system (PLAN/ACT) that solved the tool selection overwhelm
+2. **Polars Function Categories:** Organize ~200 Polars functions into logical categories (similar to current Excel toolsets)
+3. **Category-Based Loading:** `fetch_category()` loads specific Polars function groups per execution step
+4. **Calculation Documentation:** Add detailed notes in output files explaining the analytical steps and calculations performed
+
+#### Benefits of This Approach:
+- **Analytical Power:** Full access to Polars' advanced data processing capabilities
+- **Cognitive Optimization:** Maintain <20 tools per step through categorical loading
+- **Excel Compatibility:** Output remains Excel-friendly with calculated values and comprehensive calculation documentation
+- **Value-Based Output:** Final Excel files contain computed results (not formulas) with detailed notes on how calculations were performed
+- **Formula Recreation:** Excel users can reconstruct formulas based on detailed calculation notes if needed
+- **Focus on Results:** Prioritize correct analysis over formula transparency (formulas were a bonus, not the primary goal)
+
+#### Recipe System for Dynamic Guidance
+
+To address trajectory and analytical approach issues, we'll implement a dynamic recipe system:
+
+**Recipe Architecture:**
+- **Generic Analysis Recipes:** Pre-written prompts for common financial calculations (churn analysis, ARPU, cohort analysis, etc.)
+- **Dynamic Recipe Fetching:** LLM-powered system that analyzes the user's task and fetches relevant recipes
+- **Recipe Integration:** Selected recipes get dynamically added to the agent's prompt to guide analytical approach
+- **Best Practice Enforcement:** Recipes encode domain expertise (e.g., "for churn analysis, always calculate unique customers first")
+
+**Recipe Categories:**
+- Customer Analytics (churn, retention, segmentation)
+- Financial Metrics (ARPU, LTV, unit economics)
+- Cohort Analysis (retention curves, behavioral cohorts)
+- Revenue Analysis (MRR, growth rates, seasonality)
+- Operational Metrics (conversion funnels, engagement)
+
+**Implementation Flow:**
+1. User submits analysis request
+2. Recipe selection LLM identifies relevant recipes based on task
+3. Selected recipes are dynamically added to the agent's system prompt
+4. Agent follows recipe guidance while executing the plan-act workflow
+5. Recipe guidance ensures proper analytical trajectories (e.g., unique customer extraction when needed)
+
+This hybrid approach addresses the core issues while maintaining the architectural benefits we've discovered, focusing on delivering correct analysis results with the power of modern data processing tools.
 
 ## Current Architecture
 
